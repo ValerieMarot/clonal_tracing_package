@@ -4,7 +4,7 @@ import os
 from passenger.preprocess.import_sequence_context import get_variant_as_matrix
 
 
-def get_meta(meta_file, annotation_file, chrom, NN_filter_artefacts, NN_model, path_to_conext_data):
+def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_conext_data):
     meta_0 = pd.read_csv(meta_file, index_col=False)
     ann_0 = pd.read_csv(annotation_file, sep="\t", index_col=False, header=None, comment="#")
     ann_0.insert(0, 'chr', np.repeat(chrom, ann_0.shape[0]))
@@ -23,7 +23,7 @@ def get_meta(meta_file, annotation_file, chrom, NN_filter_artefacts, NN_model, p
     sub_ = [i in pos for i in meta_0.pos]
     meta_0["dbSNP"] = sub_
 
-    if NN_filter_artefacts:
+    if NN_model is not None:
         rows = []
         # print(meta_0)
         for i in range(meta_0.shape[0]):
@@ -50,19 +50,22 @@ def load_NN_model(model):
 def get_variant_measurement_data(path,
                                  all_chroms=None,
                                  cell_names=None,
-                                 NN_filter_artefacts=False,
+                                 NN_filter_artefacts_path=None,
                                  path_to_context_data=""):
     meta, ann, ALT, REF = None, None, None, None
     all_chroms = ["chr" + str(i) for i in range(1, 23)] if all_chroms is None else all_chroms
 
-    NN_model = load_NN_model('../2023_02_var-filtering-cross-patients/LSTM_model') if NN_filter_artefacts else None
+    if NN_filter_artefacts_path is not None:
+        NN_model = load_NN_model(NN_filter_artefacts_path)
+    else:
+        NN_model = None
 
     for chrom in all_chroms:
         print(chrom)
         ALT_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-ALT.csv", index_col=False, header=None)
         REF_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-REF.csv", index_col=False, header=None)
         meta_0 = get_meta(path + "vcf/processed-" + chrom + "-meta.csv", path + "vcf/annotations-" + chrom + ".tsv",
-                          chrom, NN_filter_artefacts, NN_model, path_to_context_data)
+                          chrom, NN_model, path_to_context_data)
 
         ALT = ALT_0 if ALT is None else pd.concat((ALT, ALT_0))
         REF = REF_0 if REF is None else pd.concat((REF, REF_0))

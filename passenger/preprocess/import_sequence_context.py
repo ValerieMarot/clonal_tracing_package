@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 def get(chrom, pos, tpe="", window=30, norm=True, path=""):
@@ -12,7 +11,6 @@ def get(chrom, pos, tpe="", window=30, norm=True, path=""):
     to_drop = []
     for i in uniq[counts > 1]:
         whr = np.where(ALT[1] == i)[0]
-        idx = np.argmax(np.max(ALT.iloc[whr][[2, 3, 4, 5]], axis=1))
         to_drop.extend(np.delete(whr, 0))
 
     ALT = ALT.drop(ALT.index[to_drop])
@@ -26,7 +24,6 @@ def get(chrom, pos, tpe="", window=30, norm=True, path=""):
     to_drop = []
     for i in uniq[counts > 1]:
         whr = np.where(REF[1] == i)[0]
-        idx = np.argmax(np.max(REF.iloc[whr][[2, 3, 4, 5]], axis=1))
         to_drop.extend(np.delete(whr, 0))
 
     REF = REF.drop(REF.index[to_drop])
@@ -65,9 +62,12 @@ def get_variant_as_single_row(chrom, pos, tpe="", window=30, path=""):
 
 
 def get_variant_as_matrix(chrom, pos, tpe="", window=30, path=""):
-    REF, ALT = get(chrom, pos, tpe, window=30, path=path)
+    REF, ALT = get(chrom, pos, tpe, window=window, path=path)
     return np.array(pd.concat((REF, ALT), axis=1)[[2, 3, 4, 5]])
 
+
+"""
+import matplotlib.pyplot as plt
 
 def plot_variant(chrom, pos, tpe="", window=30, path=""):
     REF, ALT = get(chrom, pos, tpe, window, False, path=path)
@@ -98,3 +98,5 @@ def plot_variant(chrom, pos, tpe="", window=30, path=""):
 
     plt.tight_layout()
     plt.show()
+
+"""

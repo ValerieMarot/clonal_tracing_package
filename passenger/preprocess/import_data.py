@@ -55,8 +55,7 @@ def get_variant_measurement_data(path,
     meta, ann, ALT, REF = None, None, None, None
     all_chroms = ["chr" + str(i) for i in range(1, 23)] if all_chroms is None else all_chroms
 
-    if NN_filter_artefacts:
-        NN_model = load_NN_model('../2023_02_var-filtering-cross-patients/LSTM_model')
+    NN_model = load_NN_model('../2023_02_var-filtering-cross-patients/LSTM_model') if NN_filter_artefacts else None
 
     for chrom in all_chroms:
         print(chrom)

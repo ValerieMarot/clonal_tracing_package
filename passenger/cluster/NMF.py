@@ -6,14 +6,18 @@ import random
 from itertools import permutations
 
 
-def get_state(cov, M, M_high_conf=True):
+def get_state(cov, M, M_high_conf=True, full_weights=False):
     # set state matrix
     S = np.zeros(cov.shape)
-    b = 0  # prob of monoallelic expression
-    for i in np.unique(cov):
-        p = 1 - (b + (1 - b) * binom.pmf(k=0, n=i, p=.5))
-        S[np.where(cov == i)] = p
-    if M_high_conf:
+    if full_weights:
+        b = 0  # prob of monoallelic expression
+        for i in np.unique(cov):
+            p = 1 - (b + (1 - b) * binom.pmf(k=0, n=i, p=.5))
+            S[np.where(cov == i)] = p
+        if M_high_conf:
+            S[M > 0] = 1
+    else:
+        S[np.where(cov >= 2)] = 0.5
         S[M > 0] = 1
     return S
 
@@ -140,11 +144,10 @@ def parallel_run(in_arr, n_entries, n_parts, fun, bounds, constraints, axis=0):
     return np.array(r)
 
 
-def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, n_bootstrap=10, bootstrap_percent=.9,
+def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=10, bootstrap_percent=.9,
                    max_cycles=25, force_cell_assignment=False,
                    break_iteration=True,
-                   parallel=True, n_cores=None, reg=0):
-
+                   parallel=True, n_cores=None, reg=0, ):
     # run wNMF
     C_all, V_all = [], []
     print("running bootstrap")
@@ -155,7 +158,7 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, n_bootstrap=10, bootstrap_percen
         cov = REF_sub + ALT_sub
         M = ((ALT / cov) > VAF_thres) & (ALT >= 2)
 
-        S = get_state(cov, M)  # S probability matrix of seing mutation given the coverage
+        S = get_state(cov, M, full_weights)  # S probability matrix of seing mutation given the coverage
         C, V = NMF_weighted(M,
                             weights=S,
                             k=k,  # number of clusters we are looking for

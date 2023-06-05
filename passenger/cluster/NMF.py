@@ -158,7 +158,7 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=1
         cov = REF_sub + ALT_sub
         M = np.zeros(REF.shape)
         whr = np.where(cov >= 2)
-        M[whr] = (ALT_sub[whr] / cov[whr]) > VAF_thres[whr]
+        M[whr] = (ALT_sub[whr] / cov[whr]) > VAF_thres
 
         S = get_state(cov, M, full_weights)  # S probability matrix of seing mutation given the coverage
         C, V = NMF_weighted(M,

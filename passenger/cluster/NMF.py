@@ -187,10 +187,7 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=1
     conf = 1 - np.min((binom.cdf(aggr, n_bootstrap, 1 / k),
                        binom.cdf(n_bootstrap - aggr, n_bootstrap, 1 / k)), axis=0)
     C = np.mean(np.array(C_all), axis=0)
-    C = C[0, ]  # for 2D array
-
     V = np.nanmean(V_all, axis=0)
-    V = V[:, :, 0]  # for 2D array
     V_std = np.nanstd(V_all, axis=0)
 
     return C, conf, V, V_std

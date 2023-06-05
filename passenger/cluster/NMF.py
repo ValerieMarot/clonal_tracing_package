@@ -152,7 +152,7 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=1
     C_all, V_all = [], []
     print("running bootstrap")
     for i in range(n_bootstrap):
-        print()
+        # print(i)
         REF_sub = subsample(REF, bootstrap_percent)
         ALT_sub = subsample(ALT, bootstrap_percent)
         cov = REF_sub + ALT_sub
@@ -182,11 +182,14 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=1
         V_all[i] = V_all[i].T[p].T
 
     aggr = np.sum(np.argmax(C_all, axis=1), axis=0)
+    print(aggr)
     conf = 1 - np.min((binom.cdf(aggr, n_bootstrap, 1 / k),
                        binom.cdf(n_bootstrap - aggr, n_bootstrap, 1 / k)), axis=0)
     C = np.mean(np.array(C_all), axis=0)
+    C = C[0, ]  # for 2D array
 
     V = np.nanmean(V_all, axis=0)
+    V = V[:, :, 0]  # for 2D array
     V_std = np.nanstd(V_all, axis=0)
 
     return C, conf, V, V_std

@@ -149,17 +149,23 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=1
                    break_iteration=True,
                    parallel=True, n_cores=None, reg=0, ):
     # run wNMF
+    bootstrap_var = True
+    n_vars = ALT.shape[0]
     C_all, V_all = [], []
     print("running bootstrap")
     for i in range(n_bootstrap):
         # print(i)
-        REF_sub = subsample(REF, bootstrap_percent)
-        ALT_sub = subsample(ALT, bootstrap_percent)
+        if bootstrap_var:
+            idx = np.random.choice(np.arange(n_vars), int(n_vars * bootstrap_percent), replace=False)
+            REF_sub = REF[idx]
+            ALT_sub = ALT[idx]
+        else:
+            REF_sub = subsample(REF, bootstrap_percent)
+            ALT_sub = subsample(ALT, bootstrap_percent)
         cov = REF_sub + ALT_sub
-        M = np.zeros(REF.shape)
+        M = np.zeros(REF_sub.shape)
         whr = np.where(cov >= 2)
         M[whr] = (ALT_sub[whr] / cov[whr]) > VAF_thres
-
         S = get_state(cov, M, full_weights)  # S probability matrix of seing mutation given the coverage
         C, V = NMF_weighted(M,
                             weights=S,
@@ -168,6 +174,10 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=1
                             break_iteration=break_iteration,
                             parallel=parallel, n_cores=n_cores, reg=reg
                             )
+        if bootstrap_var:
+            V_ = np.zeros(shape=(n_vars, k)) * np.nan
+            V_[idx] = V
+            V = V_
         C_all.append(C), V_all.append(V)
     C_all = np.array(C_all)
     V_all = np.array(V_all)
@@ -181,11 +191,9 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=1
             for h in range(k):
                 d[j, h] = (np.sum((clus1 == j) & (clus2 == h)))
         p = [perm[np.argmax(np.sum(d[np.arange(0, k), perm], axis=1))]]
-        C_all[i] = C_all[i][p][0]
-        V_all[i] = V_all[i].T[p][0].T
-
+        C_all[i] = C_all[i][p]#[0]
+        V_all[i] = V_all[i].T[p].T
     aggr = np.sum(np.argmax(C_all, axis=1), axis=0)
-    print(aggr)
     conf = 1 - np.min((binom.cdf(aggr, n_bootstrap, 1 / k),
                        binom.cdf(n_bootstrap - aggr, n_bootstrap, 1 / k)), axis=0)
     C = np.mean(np.array(C_all), axis=0)

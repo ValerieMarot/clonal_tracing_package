@@ -1,2 +1,7 @@
 numpy~=1.25.0
 scipy~=1.10.1
+setuptools~=61.2.0
+joblib~=1.2.0
+matplotlib
+seaborn
+pandas~=2.0.2

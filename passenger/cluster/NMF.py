@@ -119,12 +119,6 @@ def parallel_run(in_arr, n_entries, n_parts, fun, bounds, constraints, axis=0):
     pars = []
     for j in range(n_entries):
         pars.append((in_arr[j] if axis == 0 else in_arr[:, j], j))
-    pars = np.array(pars)
-
-    # partition
-    to_split = range(0, n_entries)
-    n_ = int(np.ceil(n_entries / n_parts))
-    output = [to_split[i:i + n_] for i in range(0, n_entries, n_)]
 
     # run fitting
     def fit_helper(pars_):
@@ -135,7 +129,8 @@ def parallel_run(in_arr, n_entries, n_parts, fun, bounds, constraints, axis=0):
                                    args=p[1]).x)
         return out
 
-    result = Parallel(n_jobs=8, backend="loky")(delayed(fit_helper)(pars[i]) for i in output)
+    n_ = int(np.ceil(n_entries / n_parts))
+    result = Parallel(n_jobs=8, backend="loky")(delayed(fit_helper)(pars[i:i + n_]) for i in range(0, n_entries, n_))
 
     # format result
     r = []
@@ -144,7 +139,7 @@ def parallel_run(in_arr, n_entries, n_parts, fun, bounds, constraints, axis=0):
     return np.array(r)
 
 
-def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=10, bootstrap_percent=.9,
+def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=10, bootstrap_percent=.8,
                    max_cycles=25, force_cell_assignment=False,
                    break_iteration=True,
                    parallel=True, n_cores=None, reg=0, ):
@@ -181,6 +176,8 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=1
         C_all.append(C), V_all.append(V)
     C_all = np.array(C_all)
     V_all = np.array(V_all)
+    print(C_all.shape)
+    print(V_all.shape)
     # align the NMF runs
     clus1 = np.argmax(C_all[0], axis=0)
     perm = list(permutations(np.arange(0, k)))
@@ -191,8 +188,9 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=1
             for h in range(k):
                 d[j, h] = (np.sum((clus1 == j) & (clus2 == h)))
         p = [perm[np.argmax(np.sum(d[np.arange(0, k), perm], axis=1))]]
-        C_all[i] = C_all[i][p]#[0]
-        V_all[i] = V_all[i].T[p].T
+        print(p)
+        C_all[i] = C_all[i][p][0]
+        V_all[i] = V_all[i].T[p][0].T
     aggr = np.sum(np.argmax(C_all, axis=1), axis=0)
     conf = 1 - np.min((binom.cdf(aggr, n_bootstrap, 1 / k),
                        binom.cdf(n_bootstrap - aggr, n_bootstrap, 1 / k)), axis=0)

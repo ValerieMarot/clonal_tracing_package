@@ -1,2 +1,2 @@
-setuptools~=58.0.4
-numpy~=1.20.3 # test
+numpy~=1.25.0
+scipy~=1.10.1

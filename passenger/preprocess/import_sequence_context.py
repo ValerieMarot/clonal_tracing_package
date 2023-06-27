@@ -4,8 +4,8 @@ import numpy as np
 
 def get(chrom, pos, tpe="", window=30, norm=True, path=""):
     rng = np.arange(pos - window, pos + window + 1)
-    ALT = pd.read_csv(path + tpe + "/" + chrom + "_" + str(pos) + "_ALT.csv", header=None)
-    REF = pd.read_csv(path + tpe + "/" + chrom + "_" + str(pos) + "_REF.csv", header=None)
+    ALT = pd.read_csv(path + tpe + "/ALT_" + chrom + "_" + str(pos) + ".csv", header=None)
+    REF = pd.read_csv(path + tpe + "/REF_" + chrom + "_" + str(pos) + ".csv", header=None)
 
     uniq, uniq_idx, counts = np.unique(ALT[1], axis=0, return_index=True, return_counts=True)
     to_drop = []

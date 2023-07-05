@@ -48,7 +48,7 @@ def get(chrom, pos, tpe="", window=30, norm=True, path=""):
             ALT /= np.sum(ALT.loc[pos])
         return REF, ALT
     else:
-        np.ones((61, 8)) * np.nan
+        return np.ones((61, 8)) * np.nan
 
 
 def get_variant_as_single_row(chrom, pos, tpe="", window=30, path=""):

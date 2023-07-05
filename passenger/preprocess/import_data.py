@@ -28,8 +28,9 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_conext_data):
         # print(meta_0)
         for i in range(meta_0.shape[0]):
             entry = meta_0.iloc[i]
-            rows.append(get_variant_as_matrix(entry["chr"], entry["pos"], window=30, path=path_to_conext_data))
-
+            data = get_variant_as_matrix(entry["chr"], entry["pos"], window=30, path=path_to_conext_data)
+            print(data)
+            rows.append(data)
         rows = np.array(rows)
         print(rows)
         pred = NN_model.predict(rows)

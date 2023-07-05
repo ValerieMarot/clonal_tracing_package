@@ -34,7 +34,10 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_conext_data):
             else:
                 rows.append(np.ones((61, 8)) * np.nan)
         rows = np.array(rows)
+        print(rows)
         pred = NN_model.predict(rows)
+        print(pred)
+        print(pred[:,1])
         meta_0["NN_pred_real"] = pred[:, 1]
     return meta_0
 

@@ -1,49 +1,54 @@
 import pandas as pd
 import numpy as np
+import os
 
 
 def get(chrom, pos, tpe="", window=30, norm=True, path=""):
-    rng = np.arange(pos - window, pos + window + 1)
-    ALT = pd.read_csv(path + tpe + "/ALT_" + chrom + "_" + str(pos) + ".csv", header=None)
-    REF = pd.read_csv(path + tpe + "/REF_" + chrom + "_" + str(pos) + ".csv", header=None)
+    alt_path = path + tpe + "/ALT_" + chrom + "_" + str(pos) + ".csv"
+    ref_path = path + tpe + "/REF_" + chrom + "_" + str(pos) + ".csv"
 
-    uniq, uniq_idx, counts = np.unique(ALT[1], axis=0, return_index=True, return_counts=True)
-    to_drop = []
-    for i in uniq[counts > 1]:
-        whr = np.where(ALT[1] == i)[0]
-        to_drop.extend(np.delete(whr, 0))
+    if os.path.isfile(alt_path) and os.path.isfile(ref_path):
+        rng = np.arange(pos - window, pos + window + 1)
+        ALT, REF = pd.read_csv(alt_path, header=None), pd.read_csv(ref_path, header=None)
 
-    ALT = ALT.drop(ALT.index[to_drop])
-    ALT.index = ALT[1]
-    missing = np.where([i not in ALT.index for i in rng])[0]
-    to_add = pd.DataFrame([[chrom, rng[i], 0, 0, 0, 0, np.nan] for i in missing])
-    to_add.index = rng[missing]
-    ALT = pd.concat((ALT, to_add))
+        uniq, uniq_idx, counts = np.unique(ALT[1], axis=0, return_index=True, return_counts=True)
+        to_drop = []
+        for i in uniq[counts > 1]:
+            whr = np.where(ALT[1] == i)[0]
+            to_drop.extend(np.delete(whr, 0))
 
-    uniq, uniq_idx, counts = np.unique(REF[1], axis=0, return_index=True, return_counts=True)
-    to_drop = []
-    for i in uniq[counts > 1]:
-        whr = np.where(REF[1] == i)[0]
-        to_drop.extend(np.delete(whr, 0))
+        ALT = ALT.drop(ALT.index[to_drop])
+        ALT.index = ALT[1]
+        missing = np.where([i not in ALT.index for i in rng])[0]
+        to_add = pd.DataFrame([[chrom, rng[i], 0, 0, 0, 0, np.nan] for i in missing])
+        to_add.index = rng[missing]
+        ALT = pd.concat((ALT, to_add))
 
-    REF = REF.drop(REF.index[to_drop])
-    REF.index = REF[1]
-    missing = np.where([i not in REF.index for i in rng])[0]
-    to_add = pd.DataFrame([[chrom, rng[i], 0, 0, 0, 0, np.nan] for i in missing])
-    to_add.index = rng[missing]
-    REF = pd.concat((REF, to_add))
+        uniq, uniq_idx, counts = np.unique(REF[1], axis=0, return_index=True, return_counts=True)
+        to_drop = []
+        for i in uniq[counts > 1]:
+            whr = np.where(REF[1] == i)[0]
+            to_drop.extend(np.delete(whr, 0))
 
-    REF = REF.loc[rng]
-    ALT = ALT.loc[rng]
+        REF = REF.drop(REF.index[to_drop])
+        REF.index = REF[1]
+        missing = np.where([i not in REF.index for i in rng])[0]
+        to_add = pd.DataFrame([[chrom, rng[i], 0, 0, 0, 0, np.nan] for i in missing])
+        to_add.index = rng[missing]
+        REF = pd.concat((REF, to_add))
 
-    REF = REF.drop(columns=[0, 1, 6])
-    ALT = ALT.drop(columns=[0, 1, 6])
+        REF = REF.loc[rng]
+        ALT = ALT.loc[rng]
 
-    if norm:
-        REF /= np.sum(REF.loc[pos])
-        ALT /= np.sum(ALT.loc[pos])
+        REF = REF.drop(columns=[0, 1, 6])
+        ALT = ALT.drop(columns=[0, 1, 6])
 
-    return REF, ALT
+        if norm:
+            REF /= np.sum(REF.loc[pos])
+            ALT /= np.sum(ALT.loc[pos])
+        return REF, ALT
+    else:
+        np.ones((61, 8)) * np.nan
 
 
 def get_variant_as_single_row(chrom, pos, tpe="", window=30, path=""):

@@ -28,11 +28,8 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_conext_data):
         # print(meta_0)
         for i in range(meta_0.shape[0]):
             entry = meta_0.iloc[i]
-            prefix = path_to_conext_data + entry["chr"] + "_" + str(entry["pos"])
-            if os.path.isfile(prefix + "_ALT.csv"):
-                rows.append(get_variant_as_matrix(entry["chr"], entry["pos"], window=30, path=path_to_conext_data))
-            else:
-                rows.append(np.ones((61, 8)) * np.nan)
+            rows.append(get_variant_as_matrix(entry["chr"], entry["pos"], window=30, path=path_to_conext_data))
+
         rows = np.array(rows)
         print(rows)
         pred = NN_model.predict(rows)

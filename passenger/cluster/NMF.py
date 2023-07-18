@@ -63,7 +63,7 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
             n_cores = os.cpu_count()
         n_parts_V = int(v_entries / n_cores)
         n_parts_C = int(c_entries / n_cores)
-    T = False
+    T = True
     cost = []
     for i in range(max_cycles):
         if T:

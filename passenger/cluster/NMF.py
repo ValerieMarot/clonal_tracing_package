@@ -49,6 +49,7 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
     v_entries, c_entries = X.shape[0], X.shape[1]
     V = np.random.rand(v_entries, k)
     C = np.random.rand(k, c_entries)
+
     # optional constraint
     if force_cell_assignment:
         def con(c):
@@ -62,55 +63,68 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
             n_cores = os.cpu_count()
         n_parts_V = int(v_entries / n_cores)
         n_parts_C = int(c_entries / n_cores)
-
+    T = False
+    cost = []
     for i in range(max_cycles):
+        if T:
+            #########
+            # fit V #
+            #########
+            def fun_v(v, h):
+                # note: in the function we use np.clip because np.dot(v, C) can be > 1 (e.g. if a variant is associated
+                # with multiple clones, and a cell with multiple clones), but x cannot be > 1
+                # -> if we have np.dot > 1 and x==1 this should not be penalised
+                reg_ = reg * np.sum(v ** 2)
+                return np.sum((np.clip((np.dot(v, C) * weights[h]), 0, 1) - X[h]) ** 2) + reg_
 
-        V_ = V.copy()
-        C_ = C.copy()
+            if parallel:
+                V = parallel_run(V, v_entries, n_parts_V, fun_v, bounds, constraints=None)
+            else:
+                for j in np.arange(0, X.shape[0]).tolist():
+                    V[j] = op.minimize(fun_v, V[j], bounds=bounds, args=j).x
 
-        #########
-        # fit V #
-        #########
-        def fun_v(v, h):
-            # note: in the function we use np.clip because np.dot(v, C) can be > 1 (e.g. if a variant is associated
-            # with multiple clones, and a cell with multiple clones), but x cannot be > 1
-            # -> if we have np.dot > 1 and x==1 this should not be penalised
-            reg_ = reg * np.sum(v ** 2)
-            return np.sum((np.clip((np.dot(v, C) * weights[h]), 0, 1) - X[h]) ** 2) + reg_
+            #########
+            # fit C #
+            #########
+            def fun_c(c, h):
+                # same as above with np.clip
+                return np.sum((np.clip((np.dot(V, c) * weights[:, h]), 0, 1) - X[:, h]) ** 2)
 
-        if parallel:
-            V_ = parallel_run(V_, v_entries, n_parts_V, fun_v, bounds, constraints=None)
+            if parallel:
+                C = parallel_run(C, c_entries, n_parts_C, fun_c, bounds,
+                                  constraints=cons if force_cell_assignment else None, axis=1).T
+            else:
+                for j in np.arange(0, X.shape[0]).tolist():
+                    C[:, j] = op.minimize(fun_c, C[:, j], bounds=bounds,
+                                          constraints=cons if force_cell_assignment else None,
+                                          args=j).x
+
         else:
-            for j in np.arange(0, X.shape[0]).tolist():
-                V_[j] = op.minimize(fun_v, V[j], bounds=bounds, args=j).x
 
-        #########
-        # fit C #
-        #########
-        def fun_c(c, h):
-            # same as above with np.clip
-            return np.sum((np.clip((np.dot(V_, c) * weights[:, h]), 0, 1) - X[:, h]) ** 2)
+            c_shuffled, v_shuffled = np.arange(0, c_entries), np.arange(0, v_entries)
+            np.random.shuffle(c_shuffled), np.random.shuffle(v_shuffled)
+            # fit C
+            numerator, V_dot = np.dot(V.T, X), np.dot(V.T, V)
+            for c in c_shuffled:
+                for k_ in range(k):
+                    C[k_, c] = C[k_, c] * (numerator[k_, c] / (np.dot(V_dot, C)[k_, c]))
+            C[C == 0] = np.random.rand()
+            # fit V
+            numerator, C_dot = np.dot(X, C.T), np.dot(C, C.T)
+            for v in v_shuffled:
+                for k_ in range(k):
+                    V[v, k_] = V[v, k_] * (numerator[v, k_] / np.dot(V, C_dot)[v, k_])
+            V[V == 0] = np.random.rand()
 
-        if parallel:
-            C_ = parallel_run(C_, c_entries, n_parts_C, fun_c, bounds,
-                              constraints=cons if force_cell_assignment else None, axis=1).T
-        else:
-            for j in np.arange(0, X.shape[0]).tolist():
-                C_[:, j] = op.minimize(fun_c, C[:, j], bounds=bounds,
-                                       constraints=cons if force_cell_assignment else None,
-                                       args=j).x
         ###############
         # break check #
         ###############
-        it_v, it_c = np.sum((V_ - V) ** 2), np.sum((C_ - C) ** 2)
-        V, C = V_, C_
-
-        if (it_c / C.shape[1] < .001) & (it_v / V.shape[0] < .001) & break_iteration:
-            print("breaking at iteration " + str(i))
-            print("cost " + str(np.sum((np.clip((np.dot(V, C) * weights), 0, 1) - X) ** 2)))
-            print(np.sum(V ** 2))
-            break
-
+        cost.append(np.sum((np.clip((np.dot(V, C) * weights), 0, 1) - X) ** 2))
+        if (i % 10 == 0) & (i > 0):
+            if (np.mean(cost[i - 10:i-5]) - np.mean(cost[i - 4:i]))<0:
+                break
+    # print(np.sum(V ** 2))
+    print(i)
     return C, V
 
 

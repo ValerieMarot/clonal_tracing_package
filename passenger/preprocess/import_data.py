@@ -3,7 +3,7 @@ import numpy as np
 from passenger.preprocess.import_sequence_context import get_variant_as_matrix
 
 
-def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_conext_data, path_to_exome_data):
+def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, path_to_exome_data):
     meta_0 = pd.read_csv(meta_file, index_col=False)
     ann_0 = pd.read_csv(annotation_file, sep="\t", index_col=False, header=None, comment="#")
     ann_0.insert(0, 'chr', np.repeat(chrom, ann_0.shape[0]))
@@ -26,7 +26,7 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_conext_data, p
         rows = []
         for i in range(meta_0.shape[0]):
             entry = meta_0.iloc[i]
-            data = get_variant_as_matrix(entry["chr"], entry["pos"], window=30, path=path_to_conext_data)
+            data = get_variant_as_matrix(entry["chr"], entry["pos"], window=30, path=path_to_context_data)
             rows.append(data)
         rows = np.array(rows)
         pred = NN_model.predict(rows)
@@ -68,7 +68,9 @@ def get_variant_measurement_data(path,
         ALT_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-ALT.csv", index_col=False, header=None)
         REF_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-REF.csv", index_col=False, header=None)
         meta_0 = get_meta(path + "vcf/processed-" + chrom + "-meta.csv", path + "vcf/annotations-" + chrom + ".tsv",
-                          chrom, NN_model, path_to_context_data, path_to_exome_data)
+                          chrom, NN_model,
+                          path_to_context_data=path_to_context_data,
+                          path_to_exome_data=path_to_exome_data)
 
         ALT = ALT_0 if ALT is None else pd.concat((ALT, ALT_0))
         REF = REF_0 if REF is None else pd.concat((REF, REF_0))

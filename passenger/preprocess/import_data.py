@@ -1,10 +1,9 @@
 import pandas as pd
 import numpy as np
-import os
-from passenger.preprocess.import_sequence_context import get_variant_as_matrix
+from import_sequence_context import get_variant_as_matrix
 
 
-def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_conext_data):
+def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_conext_data, path_to_exome_data):
     meta_0 = pd.read_csv(meta_file, index_col=False)
     ann_0 = pd.read_csv(annotation_file, sep="\t", index_col=False, header=None, comment="#")
     ann_0.insert(0, 'chr', np.repeat(chrom, ann_0.shape[0]))
@@ -25,18 +24,20 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_conext_data):
 
     if NN_model is not None:
         rows = []
-        # print(meta_0)
         for i in range(meta_0.shape[0]):
             entry = meta_0.iloc[i]
             data = get_variant_as_matrix(entry["chr"], entry["pos"], window=30, path=path_to_conext_data)
-            print(data)
             rows.append(data)
         rows = np.array(rows)
-        print(rows)
         pred = NN_model.predict(rows)
-        print(pred)
-        print(pred[:,1])
         meta_0["NN_pred_real"] = pred[:, 1]
+    if path_to_exome_data is not None:
+        cancer_ref, cancer_alt = get_WE_data(path_to_exome_data + "cancer-filtered-var-pileup-" + chrom + ".vcf",
+                                             meta_0)
+        healthy_ref, healthy_alt = get_WE_data(path_to_exome_data + "healthy-filtered-var-pileup-" + chrom + ".vcf",
+                                             meta_0)
+        meta_0[["cancer_ref", "cancer_alt"]] = cancer_ref, cancer_alt
+        meta_0[["healthy_ref", "healthy_alt"]] = healthy_ref, healthy_alt
     return meta_0
 
 
@@ -52,7 +53,8 @@ def get_variant_measurement_data(path,
                                  all_chroms=None,
                                  cell_names=None,
                                  NN_filter_artefacts_path=None,
-                                 path_to_context_data=""):
+                                 path_to_context_data="",
+                                 path_to_exome_data=None):
     meta, ann, ALT, REF = None, None, None, None
     all_chroms = ["chr" + str(i) for i in range(1, 23)] if all_chroms is None else all_chroms
 
@@ -66,7 +68,7 @@ def get_variant_measurement_data(path,
         ALT_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-ALT.csv", index_col=False, header=None)
         REF_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-REF.csv", index_col=False, header=None)
         meta_0 = get_meta(path + "vcf/processed-" + chrom + "-meta.csv", path + "vcf/annotations-" + chrom + ".tsv",
-                          chrom, NN_model, path_to_context_data)
+                          chrom, NN_model, path_to_context_data, path_to_exome_data)
 
         ALT = ALT_0 if ALT is None else pd.concat((ALT, ALT_0))
         REF = REF_0 if REF is None else pd.concat((REF, REF_0))
@@ -86,7 +88,34 @@ def get_variant_measurement_data(path,
         REF.columns, ALT.columns = cell_names, cell_names
 
     # variants need to be covered in at least 10% of the cells
-    sub = np.sum((ALT + REF) >= 2, axis=1) > (ALT.shape[1]/10)
+    sub = np.sum((ALT + REF) >= 2, axis=1) > (ALT.shape[1] / 10)
     ALT, REF, meta = ALT.loc[sub], REF.loc[sub], meta.loc[sub]
 
     return ALT, REF, meta
+
+
+def get_WE_data(path_to_file, meta_):
+    WE_cancer = pd.read_csv(path_to_file,
+                            comment="#", sep="\t", index_col=False, header=None)
+    ref, alt = [], []
+
+    for i in range(meta_.shape[0]):
+        meta_pos = WE_cancer[1] == meta_.iloc[i].pos
+        if not np.any(meta_pos):
+            ref.append(0), alt.append(0)
+            continue
+        else:
+            WE_c_entry = WE_cancer.loc[meta_pos].iloc[0]
+            vals = WE_c_entry[9].split(":")[-1].split(",")
+            alleles = WE_c_entry[4].split(",")
+            ref.append(vals[0])
+            vals = vals[1:]
+            found = False
+            for j, a in enumerate(alleles):
+                if a == meta_.iloc[i].mut:
+                    alt.append(vals[j])
+                    found = True
+                    break
+            if not found:
+                alt.append(0)
+    return ref, alt

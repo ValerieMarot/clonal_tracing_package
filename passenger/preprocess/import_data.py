@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from import_sequence_context import get_variant_as_matrix
+from passenger.preprocess.import_sequence_context import get_variant_as_matrix
 
 
 def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_conext_data, path_to_exome_data):

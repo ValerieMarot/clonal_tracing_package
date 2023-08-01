@@ -29,6 +29,7 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
             data = get_variant_as_matrix(entry["chr"], entry["pos"], window=30, path=path_to_context_data)
             rows.append(data)
         rows = np.array(rows)
+        print(rows)
         pred = NN_model.predict(rows)
         meta_0["NN_pred_real"] = pred[:, 1]
     if path_to_exome_data is not None:

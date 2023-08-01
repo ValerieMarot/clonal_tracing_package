@@ -38,8 +38,10 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
         if is_non_zero_file(cancer_file) and is_non_zero_file(healthy_file):
             cancer_ref, cancer_alt = get_WE_data(cancer_file, meta_0)
             healthy_ref, healthy_alt = get_WE_data(healthy_file, meta_0)
-        meta_0[["cancer_ref", "cancer_alt"]] = cancer_ref, cancer_alt
-        meta_0[["healthy_ref", "healthy_alt"]] = healthy_ref, healthy_alt
+        meta_0["cancer_ref"] = cancer_ref
+        meta_0["cancer_alt"] = cancer_alt
+        meta_0["healthy_ref"] = healthy_ref
+        meta_0["healthy_alt"] = healthy_alt
     return meta_0
 
 

@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from passenger.preprocess.import_sequence_context import get_variant_as_matrix
+from passenger.preprocess.import_sequence_context import get_variant_as_matrix, is_non_zero_file
 
 
 def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, path_to_exome_data):
@@ -33,10 +33,11 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
         pred = NN_model.predict(rows)
         meta_0["NN_pred_real"] = pred[:, 1]
     if path_to_exome_data is not None:
-        cancer_ref, cancer_alt = get_WE_data(path_to_exome_data + "cancer-filtered-var-pileup-" + chrom + ".vcf",
-                                             meta_0)
-        healthy_ref, healthy_alt = get_WE_data(path_to_exome_data + "healthy-filtered-var-pileup-" + chrom + ".vcf",
-                                             meta_0)
+        cancer_file = path_to_exome_data + "cancer-filtered-var-pileup-" + chrom + ".vcf"
+        healthy_file = path_to_exome_data + "healthy-filtered-var-pileup-" + chrom + ".vcf"
+        if is_non_zero_file(cancer_file) and is_non_zero_file(healthy_file):
+            cancer_ref, cancer_alt = get_WE_data(cancer_file, meta_0)
+            healthy_ref, healthy_alt = get_WE_data(healthy_file, meta_0)
         meta_0[["cancer_ref", "cancer_alt"]] = cancer_ref, cancer_alt
         meta_0[["healthy_ref", "healthy_alt"]] = healthy_ref, healthy_alt
     return meta_0

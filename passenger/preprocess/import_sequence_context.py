@@ -3,11 +3,16 @@ import numpy as np
 import os
 
 
+def is_non_zero_file(fpath):
+    return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
+
+
 def get(chrom, pos, tpe="", window=30, norm=True, path=""):
     alt_path = path + tpe + "/ALT_" + chrom + "_" + str(pos) + ".csv"
     ref_path = path + tpe + "/REF_" + chrom + "_" + str(pos) + ".csv"
+    print(alt_path, ref_path)
 
-    if os.path.isfile(alt_path) and os.path.isfile(ref_path):
+    if is_non_zero_file(alt_path) and is_non_zero_file(ref_path):
         rng = np.arange(pos - window, pos + window + 1)
         ALT, REF = pd.read_csv(alt_path, header=None), pd.read_csv(ref_path, header=None)
 

@@ -36,12 +36,14 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
         cancer_file = path_to_exome_data + "cancer-filtered-var-pileup-" + chrom + ".vcf"
         healthy_file = path_to_exome_data + "healthy-filtered-var-pileup-" + chrom + ".vcf"
         if is_non_zero_file(cancer_file) and is_non_zero_file(healthy_file):
-            cancer_ref, cancer_alt = get_WE_data(cancer_file, meta_0)
-            healthy_ref, healthy_alt = get_WE_data(healthy_file, meta_0)
+            cancer_ref, cancer_alt, cancer_cov = get_WE_data(cancer_file, meta_0)
+            healthy_ref, healthy_alt, healthy_cov = get_WE_data(healthy_file, meta_0)
         meta_0["cancer_ref"] = cancer_ref
         meta_0["cancer_alt"] = cancer_alt
+        meta_0["cancer_cov"] = cancer_cov
         meta_0["healthy_ref"] = healthy_ref
         meta_0["healthy_alt"] = healthy_alt
+        meta_0["healthy_cov"] = healthy_cov
     return meta_0
 
 
@@ -103,25 +105,25 @@ def get_variant_measurement_data(path,
 def get_WE_data(path_to_file, meta_):
     WE_cancer = pd.read_csv(path_to_file,
                             comment="#", sep="\t", index_col=False, header=None)
-    ref, alt = [], []
+    ref, alt, cov = [], [], []
 
     for i in range(meta_.shape[0]):
         meta_pos = WE_cancer[1] == meta_.iloc[i].pos
         if not np.any(meta_pos):
-            ref.append(0), alt.append(0)
+            ref.append(0), alt.append(0), cov.append(0)
             continue
         else:
             WE_c_entry = WE_cancer.loc[meta_pos].iloc[0]
             vals = WE_c_entry[9].split(":")[-1].split(",")
             alleles = WE_c_entry[4].split(",")
             ref.append(vals[0])
+            cov.append(np.sum(vals))
             vals = vals[1:]
             found = False
             for j, a in enumerate(alleles):
                 if a == meta_.iloc[i].mut:
                     alt.append(vals[j])
                     found = True
-                    break
             if not found:
                 alt.append(0)
-    return ref, alt
+    return ref, alt, cov

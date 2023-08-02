@@ -117,7 +117,7 @@ def get_WE_data(path_to_file, meta_):
             vals = WE_c_entry[9].split(":")[-1].split(",")
             alleles = WE_c_entry[4].split(",")
             ref.append(vals[0])
-            cov.append(np.sum(vals.astype(int)))
+            cov.append(np.sum(np.array(vals).astype(int)))
             vals = vals[1:]
             found = False
             for j, a in enumerate(alleles):

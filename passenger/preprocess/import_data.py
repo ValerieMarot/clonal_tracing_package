@@ -1,10 +1,18 @@
 import pandas as pd
 import numpy as np
 from passenger.preprocess.import_sequence_context import get_variant_as_matrix, is_non_zero_file
+from scipy.io import mmread
 
 
-def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, path_to_exome_data):
-    meta_0 = pd.read_csv(meta_file, index_col=False)
+def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, path_to_exome_data,
+             datatype):
+    if datatype == "S2":
+        meta_0 = pd.read_csv(meta_file, index_col=False)
+    else:
+        meta_0 = pd.read_csv(meta_file, index_col=False, header=None,
+                             sep="\t", comment="#")
+        meta_0.columns = ["chr", "pos", "ID", "ref", "mut", "qual", "filter", "info"]
+        meta_0 = meta_0[["chr", "pos", "ref", "mut"]]
     ann_0 = pd.read_csv(annotation_file, sep="\t", index_col=False, header=None, comment="#")
     ann_0.insert(0, 'chr', np.repeat(chrom, ann_0.shape[0]))
     ann_0.columns = ["chr", "pos", "allele", "gene", "feature", "feature_type", "consequence", "AA", "Codons",
@@ -29,7 +37,6 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
             data = get_variant_as_matrix(entry["chr"], entry["pos"], window=30, path=path_to_context_data)
             rows.append(data)
         rows = np.array(rows)
-        print(rows)
         pred = NN_model.predict(rows)
         meta_0["NN_pred_real"] = pred[:, 1]
     if path_to_exome_data is not None:
@@ -60,7 +67,8 @@ def get_variant_measurement_data(path,
                                  cell_names=None,
                                  NN_filter_artefacts_path=None,
                                  path_to_context_data="",
-                                 path_to_exome_data=None):
+                                 path_to_exome_data=None,
+                                 datatype="S2"):
     meta, ann, ALT, REF = None, None, None, None
     all_chroms = ["chr" + str(i) for i in range(1, 23)] if all_chroms is None else all_chroms
 
@@ -71,13 +79,30 @@ def get_variant_measurement_data(path,
 
     for chrom in all_chroms:
         print(chrom)
-        ALT_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-ALT.csv", index_col=False, header=None)
-        REF_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-REF.csv", index_col=False, header=None)
-        meta_0 = get_meta(path + "vcf/processed-" + chrom + "-meta.csv", path + "vcf/annotations-" + chrom + ".tsv",
-                          chrom, NN_model,
-                          path_to_context_data=path_to_context_data,
-                          path_to_exome_data=path_to_exome_data)
+        if datatype == "S2":
+            ALT_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-ALT.csv", index_col=False, header=None)
+            REF_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-REF.csv", index_col=False, header=None)
+            meta_0 = get_meta(path + "vcf/processed-" + chrom + "-meta.csv", path + "vcf/annotations-" + chrom + ".tsv",
+                              chrom, NN_model,
+                              path_to_context_data=path_to_context_data,
+                              path_to_exome_data=path_to_exome_data)
+        else:
+            f = open(path + '/' + chrom + '/cellSNP.tag.AD.mtx', 'r')
+            ALT_0 = mmread(f).A
 
+            f = open(path + '/' + chrom + '/cellSNP.tag.DP.mtx', 'r')
+            DP = mmread(f).A
+
+            # f = open(path+'/'+chrom+'cellSNP.tag.OTH.mtx', 'r')
+            # OTH = mmread(f).A
+
+            REF_0 = DP - ALT_0
+
+            meta_0 = get_meta(path + '/' + chrom + '/cellSNP.base.vcf', path + '/' + chrom + '/annotations.tsv',
+                              chrom, NN_model,
+                              path_to_context_data=path_to_context_data,
+                              path_to_exome_data=path_to_exome_data,
+                              datatype=datatype)
         ALT = ALT_0 if ALT is None else pd.concat((ALT, ALT_0))
         REF = REF_0 if REF is None else pd.concat((REF, REF_0))
         meta = meta_0 if meta is None else pd.concat((meta, meta_0))

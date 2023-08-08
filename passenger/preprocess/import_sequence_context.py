@@ -10,7 +10,6 @@ def is_non_zero_file(fpath):
 def get(chrom, pos, tpe="", window=30, norm=True, path=""):
     alt_path = path + tpe + "/ALT_" + chrom + "_" + str(pos) + ".csv"
     ref_path = path + tpe + "/REF_" + chrom + "_" + str(pos) + ".csv"
-    print(alt_path, ref_path)
 
     if is_non_zero_file(alt_path) and is_non_zero_file(ref_path):
         rng = np.arange(pos - window, pos + window + 1)

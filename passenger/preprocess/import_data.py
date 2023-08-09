@@ -68,7 +68,8 @@ def get_variant_measurement_data(path,
                                  NN_filter_artefacts_path=None,
                                  path_to_context_data="",
                                  path_to_exome_data=None,
-                                 datatype="S2"):
+                                 datatype="S2",
+                                 sub_cell_names=None):
     meta, ann, ALT, REF = None, None, None, None
     all_chroms = ["chr" + str(i) for i in range(1, 23)] if all_chroms is None else all_chroms
 
@@ -120,6 +121,9 @@ def get_variant_measurement_data(path,
 
     if cell_names is not None:
         REF.columns, ALT.columns = cell_names, cell_names
+        if sub_cell_names is not None:
+            REF = REF[sub_cell_names]
+            ALT = ALT[sub_cell_names]
 
     # variants need to be covered in at least 10% of the cells
     sub = np.sum((ALT + REF) >= 2, axis=1) > (ALT.shape[1] / 10)

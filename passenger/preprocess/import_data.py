@@ -79,7 +79,7 @@ def get_variant_measurement_data(path,
 
     for chrom in all_chroms:
         print(chrom)
-        
+
         if datatype == "S2":
                 ALT_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-ALT.csv", index_col=False, header=None)
                 REF_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-REF.csv", index_col=False, header=None)
@@ -108,10 +108,10 @@ def get_variant_measurement_data(path,
         REF = REF_0 if REF is None else pd.concat((REF, REF_0))
         meta = meta_0 if meta is None else pd.concat((meta, meta_0))
 
-    # convert
-    last = REF.shape[1] - 1
-    REF = REF.drop(last, axis=1)
-    ALT = ALT.drop(last, axis=1)
+    if datatype == "S2": # convert
+        last = REF.shape[1] - 1
+        REF = REF.drop(last, axis=1)
+        ALT = ALT.drop(last, axis=1)
 
     # reset indices
     REF.index = np.arange(0, REF.shape[0])

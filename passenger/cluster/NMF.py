@@ -63,8 +63,8 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
             n_cores = os.cpu_count()
         n_parts_V = int(v_entries / n_cores)
         n_parts_C = int(c_entries / n_cores)
-    T = True
     cost = []
+    print(np.sum(np.abs(np.clip((np.dot(V, C) * weights), 0, 1) - X)))
     for i in range(max_cycles):
         #########
         # fit V #
@@ -101,10 +101,12 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
         ###############
         # break check #
         ###############
-        cost.append(np.sum((np.clip((np.dot(V, C) * weights), 0, 1) - X) ** 2))
+        cost.append(np.sum(np.abs(np.clip((np.dot(V, C) * weights), 0, 1) - X)))
         if (i % 10 == 0) & (i > 0):
-            print(cost[i-10: i])
-            if (np.mean(cost[i - 10:i - 5]) - np.mean(cost[i - 4:i])) < 0:
+            w_sum = np.sum(weights)
+            print(w_sum)
+            print(np.round(cost[i-10: i]/weights))
+            if (np.mean(cost[i - 10:i - 5]) - np.mean(cost[i - 4:i])) < 10:
                 break
     # print(np.sum(V ** 2))
     print(i)

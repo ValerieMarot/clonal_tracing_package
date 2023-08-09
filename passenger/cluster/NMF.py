@@ -105,7 +105,7 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
         if (i % 10 == 0) & (i > 0):
             w_sum = np.sum(weights)
             print(w_sum)
-            print(np.round(cost[i-10: i]/weights))
+            print(np.round(cost[i-10: i]/w_sum))
             if (np.mean(cost[i - 10:i - 5]) - np.mean(cost[i - 4:i])) < 10:
                 break
     # print(np.sum(V ** 2))

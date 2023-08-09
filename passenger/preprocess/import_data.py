@@ -79,33 +79,36 @@ def get_variant_measurement_data(path,
 
     for chrom in all_chroms:
         print(chrom)
-        if datatype == "S2":
-            ALT_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-ALT.csv", index_col=False, header=None)
-            REF_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-REF.csv", index_col=False, header=None)
-            meta_0 = get_meta(path + "vcf/processed-" + chrom + "-meta.csv", path + "vcf/annotations-" + chrom + ".tsv",
-                              chrom, NN_model,
-                              path_to_context_data=path_to_context_data,
-                              path_to_exome_data=path_to_exome_data)
-        else:
-            f = open(path + '/' + chrom + '/cellSNP.tag.AD.mtx', 'r')
-            ALT_0 = mmread(f).A
+        try:
+            if datatype == "S2":
+                ALT_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-ALT.csv", index_col=False, header=None)
+                REF_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-REF.csv", index_col=False, header=None)
+                meta_0 = get_meta(path + "vcf/processed-" + chrom + "-meta.csv", path + "vcf/annotations-" + chrom + ".tsv",
+                                  chrom, NN_model,
+                                  path_to_context_data=path_to_context_data,
+                                  path_to_exome_data=path_to_exome_data)
+            else:
+                f = open(path + '/' + chrom + '/cellSNP.tag.AD.mtx', 'r')
+                ALT_0 = mmread(f).A
 
-            f = open(path + '/' + chrom + '/cellSNP.tag.DP.mtx', 'r')
-            DP = mmread(f).A
+                f = open(path + '/' + chrom + '/cellSNP.tag.DP.mtx', 'r')
+                DP = mmread(f).A
 
-            # f = open(path+'/'+chrom+'cellSNP.tag.OTH.mtx', 'r')
-            # OTH = mmread(f).A
+                # f = open(path+'/'+chrom+'cellSNP.tag.OTH.mtx', 'r')
+                # OTH = mmread(f).A
 
-            REF_0 = DP - ALT_0
+                REF_0 = DP - ALT_0
 
-            meta_0 = get_meta(path + '/' + chrom + '/cellSNP.base.vcf', path + '/' + chrom + '/annotations.tsv',
-                              chrom, NN_model,
-                              path_to_context_data=path_to_context_data,
-                              path_to_exome_data=path_to_exome_data,
-                              datatype=datatype)
-        ALT = ALT_0 if ALT is None else pd.concat((ALT, ALT_0))
-        REF = REF_0 if REF is None else pd.concat((REF, REF_0))
-        meta = meta_0 if meta is None else pd.concat((meta, meta_0))
+                meta_0 = get_meta(path + '/' + chrom + '/cellSNP.base.vcf', path + '/' + chrom + '/annotations.tsv',
+                                  chrom, NN_model,
+                                  path_to_context_data=path_to_context_data,
+                                  path_to_exome_data=path_to_exome_data,
+                                  datatype=datatype)
+            ALT = ALT_0 if ALT is None else pd.concat((ALT, ALT_0))
+            REF = REF_0 if REF is None else pd.concat((REF, REF_0))
+            meta = meta_0 if meta is None else pd.concat((meta, meta_0))
+        except:
+            print("An exception occurred.")
 
     # convert
     last = REF.shape[1] - 1

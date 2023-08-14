@@ -19,6 +19,7 @@ def get_state(cov, M, M_high_conf=True, full_weights=False):
     else:
         S[np.where(cov >= 2)] = 0.5
         S[M > 0] = 1
+    # S = np.ones(cov.shape)
     return S
 
 
@@ -63,7 +64,7 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
             n_cores = os.cpu_count()
         n_parts_V = int(v_entries / n_cores)
         n_parts_C = int(c_entries / n_cores)
-    T = False
+    T = True
     cost = []
     for i in range(max_cycles):
         if T:

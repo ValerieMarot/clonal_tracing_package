@@ -107,7 +107,7 @@ def get_variant_measurement_data(path,
                                   path_to_exome_data=path_to_exome_data,
                                   datatype=datatype)
             except:
-                print("BROKEN CHROM "+all_chroms+"\n\n")
+                print("BROKEN CHROM "+chrom+"\n\n")
                 skip = True
         if not skip:
             ALT = ALT_0 if ALT is None else pd.concat((ALT, ALT_0))

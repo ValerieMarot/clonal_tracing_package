@@ -106,6 +106,10 @@ def get_variant_measurement_data(path,
                                   path_to_context_data=path_to_context_data,
                                   path_to_exome_data=path_to_exome_data,
                                   datatype=datatype)
+
+                sub = np.sum((ALT_0 + REF_0) >= 2, axis=1) > (ALT_0.shape[1] / 10)
+                ALT_0, REF_0, meta_0 = ALT_0[sub], REF_0[sub], meta_0[sub]
+
             except:
                 print("BROKEN CHROM "+chrom+"\n\n")
                 skip = True

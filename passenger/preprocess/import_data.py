@@ -80,14 +80,14 @@ def get_variant_measurement_data(path,
 
     for chrom in all_chroms:
         print(chrom)
-        skip =False
+        skip = False
         if datatype == "S2":
-                ALT_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-ALT.csv", index_col=False, header=None)
-                REF_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-REF.csv", index_col=False, header=None)
-                meta_0 = get_meta(path + "vcf/processed-" + chrom + "-meta.csv", path + "vcf/annotations-" + chrom + ".tsv",
-                                  chrom, NN_model,
-                                  path_to_context_data=path_to_context_data,
-                                  path_to_exome_data=path_to_exome_data)
+            ALT_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-ALT.csv", index_col=False, header=None)
+            REF_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-REF.csv", index_col=False, header=None)
+            meta_0 = get_meta(path + "vcf/processed-" + chrom + "-meta.csv", path + "vcf/annotations-" + chrom + ".tsv",
+                              chrom, NN_model,
+                              path_to_context_data=path_to_context_data,
+                              path_to_exome_data=path_to_exome_data)
         else:
             try:
                 f = open(path + '/' + chrom + '/cellSNP.tag.AD.mtx', 'r')
@@ -106,19 +106,19 @@ def get_variant_measurement_data(path,
                                   path_to_context_data=path_to_context_data,
                                   path_to_exome_data=path_to_exome_data,
                                   datatype=datatype)
-
-                sub = np.sum((ALT_0 + REF_0) >= 2, axis=1) > (ALT_0.shape[1] / 10)
-                ALT_0, REF_0, meta_0 = ALT_0[sub], REF_0[sub], meta_0[sub]
-
             except:
-                print("BROKEN CHROM "+chrom+"\n\n")
+                print("BROKEN CHROM " + chrom + "\n\n")
                 skip = True
+
+            # variants need to be covered in at least 10% of the cells
+            sub = np.sum((ALT_0 + REF_0) >= 2, axis=1) > (ALT_0.shape[1] / 10)
+            ALT_0, REF_0, meta_0 = ALT_0[sub], REF_0[sub], meta_0[sub]
         if not skip:
             ALT = ALT_0 if ALT is None else pd.concat((ALT, ALT_0))
             REF = REF_0 if REF is None else pd.concat((REF, REF_0))
             meta = meta_0 if meta is None else pd.concat((meta, meta_0))
 
-    if datatype == "S2": # convert
+    if datatype == "S2":  # convert
         last = REF.shape[1] - 1
         REF = REF.drop(last, axis=1)
         ALT = ALT.drop(last, axis=1)
@@ -133,10 +133,6 @@ def get_variant_measurement_data(path,
         if sub_cell_names is not None:
             REF = REF[sub_cell_names]
             ALT = ALT[sub_cell_names]
-
-    # variants need to be covered in at least 10% of the cells
-    sub = np.sum((ALT + REF) >= 2, axis=1) > (ALT.shape[1] / 10)
-    ALT, REF, meta = ALT.loc[sub], REF.loc[sub], meta.loc[sub]
 
     return ALT, REF, meta
 

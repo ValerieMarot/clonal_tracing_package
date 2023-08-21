@@ -62,8 +62,10 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
         if n_cores is None:
             import os
             n_cores = os.cpu_count()
-        n_parts_V = int(v_entries / n_cores)
-        n_parts_C = int(c_entries / n_cores)
+        print(n_cores)
+        n_parts_V = np.max((int(v_entries / n_cores), 5))  # size of V particion
+        n_parts_C = np.max((int(c_entries / n_cores), 5))  # size of C partition
+        print(n_parts_V, n_parts_C)
     T = True
     cost = []
     for i in range(max_cycles):

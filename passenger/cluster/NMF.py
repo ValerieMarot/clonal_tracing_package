@@ -156,10 +156,10 @@ def parallel_run(in_arr, n_entries, n_parts, fun, bounds, constraints, axis=0):
     return np.array(r)
 
 
-def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=True, n_bootstrap=10, bootstrap_percent=.8,
-                   max_cycles=25, force_cell_assignment=False,
+def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=False, n_bootstrap=20, bootstrap_percent=.8,
+                   max_cycles=400, force_cell_assignment=False,
                    break_iteration=True,
-                   parallel=True, n_cores=None, reg=0, ):
+                   parallel=True, n_cores=None, reg=0):
     # run wNMF
     bootstrap_var = True
     n_vars = ALT.shape[0]

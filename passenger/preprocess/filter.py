@@ -33,7 +33,7 @@ def filter_vars(REF, ALT, meta,
 def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95):
     VAF = REF / (REF + ALT)
 
-    p = meta.pos
+    p = np.array(meta.pos)
     neighbor = np.where((p[1:] - p[:-1]) < dist)[0]
     idx = meta.index[neighbor]
     idx_ = meta.index[neighbor + 1]

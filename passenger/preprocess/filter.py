@@ -1,5 +1,5 @@
 import numpy as np
-
+import scipy
 
 def filter_vars(REF, ALT, meta,
                 VAF_thres=.2,
@@ -27,6 +27,46 @@ def filter_vars(REF, ALT, meta,
     REF, ALT = REF.loc[sub], ALT.loc[sub]
     meta = meta.loc[sub]
     return REF, ALT, meta
+
+
+def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95):
+    VAF = REF/(REF+ALT)
+
+    p = meta.pos
+    neighbor = np.where((p[1:]-p[:-1]<100))[0]
+    idx = meta.index[neighbor]
+    idx_ = meta.index[neighbor+1]
+
+    for j in range(len(idx)):
+        i, i_ = idx[j], idx_[j]
+        x, y = VAF.loc[i], VAF.loc[i_]
+        sub = ~(np.isnan(x) | np.isnan(y))
+        if np.sum(sub)>20:
+            if scipy.stats.pearsonr(x[sub], y[sub])[0] < .95:
+                meta, REF, ALT = merge_row(i, i_, meta, REF, ALT)
+    return meta, REF, ALT
+
+
+def merge_row(i, i_, meta, REF, ALT):
+    row = meta.loc[i_]
+    row.pos = "_".join(np.array(meta.loc[[i, i_]].pos).astype(str))
+    row.ref = "_".join(np.array(meta.loc[[i, i_]].ref))
+    row.mut = "_".join(np.array(meta.loc[[i, i_]].mut))
+    row.dnSNP = np.any(meta.loc[[i, i_]].dbSNP)
+    row.REDIdb = np.any(meta.loc[[i, i_]].REDIdb)
+    row.cancer_ref = np.sum(meta.loc[[i, i_]].cancer_ref)
+    row.cancer_alt = np.sum(meta.loc[[i, i_]].cancer_alt)
+    row.cancer_cov = np.sum(meta.loc[[i, i_]].cancer_cov)
+    row.healthy_ref = np.sum(meta.loc[[i, i_]].healthy_ref)
+    row.healthy_alt = np.sum(meta.loc[[i, i_]].healthy_alt)
+    row.healthy_cov = np.sum(meta.loc[[i, i_]].healthy_cov)
+    meta.loc[i_] = row
+
+    REF.loc[i_] = np.sum(REF.loc[[i_, i]])
+    ALT.loc[i_] = np.sum(ALT.loc[[i_, i]])
+
+    meta, REF, ALT = meta.drop(i, axis=0), REF.drop(i, axis=0), ALT.drop(i, axis=0)
+    return meta, REF, ALT
 
 
 def get_pars_from_line(file, line_number):

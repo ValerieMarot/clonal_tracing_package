@@ -34,9 +34,12 @@ def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95):
     VAF = REF / (REF + ALT)
 
     p = meta.pos
-    neighbor = np.where((p[1:] - p[:-1] < dist))[0]
+    neighbor = np.where((p[1:] - p[:-1]) < dist)[0]
     idx = meta.index[neighbor]
     idx_ = meta.index[neighbor + 1]
+
+    c = 0
+    print("comparing " + str(len(neighbor)))
 
     for j in range(len(idx)):
         i, i_ = idx[j], idx_[j]
@@ -45,6 +48,9 @@ def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95):
         if np.sum(sub) > 20:
             if np.abs(scipy.stats.pearsonr(x[sub], y[sub])[0]) > pearson_corr:
                 meta, REF, ALT = merge_row(i, i_, meta, REF, ALT)
+                c += 1
+
+    print("filtered " + str(c))
     return meta, REF, ALT
 
 

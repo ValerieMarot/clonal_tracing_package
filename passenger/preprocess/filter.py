@@ -51,7 +51,7 @@ def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95, merge
                 c += 1
 
     print("filtered " + str(c))
-    return meta, REF, ALT
+    return REF, ALT, meta
 
 
 def merge_row(i, i_, meta, REF, ALT, merge_WE):

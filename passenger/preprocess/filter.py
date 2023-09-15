@@ -1,5 +1,5 @@
 import numpy as np
-import scipy
+from scipy.stats import pearsonr
 
 
 def filter_vars(REF, ALT, meta,
@@ -46,7 +46,7 @@ def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95):
         x, y = VAF.loc[i], VAF.loc[i_]
         sub = ~(np.isnan(x) | np.isnan(y))
         if np.sum(sub) > 20:
-            if np.abs(scipy.stats.pearsonr(x[sub], y[sub])[0]) > pearson_corr:
+            if np.abs(pearsonr(x[sub], y[sub])[0]) > pearson_corr:
                 meta, REF, ALT = merge_row(i, i_, meta, REF, ALT)
                 c += 1
 

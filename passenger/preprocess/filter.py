@@ -1,6 +1,7 @@
 import numpy as np
 import scipy
 
+
 def filter_vars(REF, ALT, meta,
                 VAF_thres=.2,
                 filter_germline=True, filter_RNA_edits=True,
@@ -30,19 +31,19 @@ def filter_vars(REF, ALT, meta,
 
 
 def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95):
-    VAF = REF/(REF+ALT)
+    VAF = REF / (REF + ALT)
 
     p = meta.pos
-    neighbor = np.where((p[1:]-p[:-1]<100))[0]
+    neighbor = np.where((p[1:] - p[:-1] < dist))[0]
     idx = meta.index[neighbor]
-    idx_ = meta.index[neighbor+1]
+    idx_ = meta.index[neighbor + 1]
 
     for j in range(len(idx)):
         i, i_ = idx[j], idx_[j]
         x, y = VAF.loc[i], VAF.loc[i_]
         sub = ~(np.isnan(x) | np.isnan(y))
-        if np.sum(sub)>20:
-            if scipy.stats.pearsonr(x[sub], y[sub])[0] < .95:
+        if np.sum(sub) > 20:
+            if np.abs(scipy.stats.pearsonr(x[sub], y[sub])[0]) < pearson_corr:
                 meta, REF, ALT = merge_row(i, i_, meta, REF, ALT)
     return meta, REF, ALT
 

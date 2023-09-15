@@ -30,7 +30,7 @@ def filter_vars(REF, ALT, meta,
     return REF, ALT, meta
 
 
-def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95):
+def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95, merge_WE=False):
     VAF = REF / (REF + ALT)
 
     p = np.array(meta.pos)
@@ -47,26 +47,27 @@ def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95):
         sub = ~(np.isnan(x) | np.isnan(y))
         if np.sum(sub) > 20:
             if np.abs(pearsonr(x[sub], y[sub])[0]) > pearson_corr:
-                meta, REF, ALT = merge_row(i, i_, meta, REF, ALT)
+                meta, REF, ALT = merge_row(i, i_, meta, REF, ALT, merge_WE=merge_WE)
                 c += 1
 
     print("filtered " + str(c))
     return meta, REF, ALT
 
 
-def merge_row(i, i_, meta, REF, ALT):
+def merge_row(i, i_, meta, REF, ALT, merge_WE):
     row = meta.loc[i_]
     row.pos = "_".join(np.array(meta.loc[[i, i_]].pos).astype(str))
     row.ref = "_".join(np.array(meta.loc[[i, i_]].ref))
     row.mut = "_".join(np.array(meta.loc[[i, i_]].mut))
     row.dnSNP = np.any(meta.loc[[i, i_]].dbSNP)
     row.REDIdb = np.any(meta.loc[[i, i_]].REDIdb)
-    row.cancer_ref = np.sum(meta.loc[[i, i_]].cancer_ref)
-    row.cancer_alt = np.sum(meta.loc[[i, i_]].cancer_alt)
-    row.cancer_cov = np.sum(meta.loc[[i, i_]].cancer_cov)
-    row.healthy_ref = np.sum(meta.loc[[i, i_]].healthy_ref)
-    row.healthy_alt = np.sum(meta.loc[[i, i_]].healthy_alt)
-    row.healthy_cov = np.sum(meta.loc[[i, i_]].healthy_cov)
+    if merge_WE:
+        row.cancer_ref = np.sum(meta.loc[[i, i_]].cancer_ref)
+        row.cancer_alt = np.sum(meta.loc[[i, i_]].cancer_alt)
+        # row.cancer_cov = np.sum(meta.loc[[i, i_]].cancer_cov)
+        row.healthy_ref = np.sum(meta.loc[[i, i_]].healthy_ref)
+        row.healthy_alt = np.sum(meta.loc[[i, i_]].healthy_alt)
+        # row.healthy_cov = np.sum(meta.loc[[i, i_]].healthy_cov)
     meta.loc[i_] = row
 
     REF.loc[i_] = np.sum(REF.loc[[i_, i]])

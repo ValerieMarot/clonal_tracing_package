@@ -43,7 +43,7 @@ def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95):
         x, y = VAF.loc[i], VAF.loc[i_]
         sub = ~(np.isnan(x) | np.isnan(y))
         if np.sum(sub) > 20:
-            if np.abs(scipy.stats.pearsonr(x[sub], y[sub])[0]) < pearson_corr:
+            if np.abs(scipy.stats.pearsonr(x[sub], y[sub])[0]) > pearson_corr:
                 meta, REF, ALT = merge_row(i, i_, meta, REF, ALT)
     return meta, REF, ALT
 

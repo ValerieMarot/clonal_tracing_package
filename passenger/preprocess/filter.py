@@ -56,20 +56,17 @@ def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95, merge
 
 def merge_row(i, i_, meta, REF, ALT, merge_WE):
     row = meta.loc[i_]
-    row.pos = "_".join(np.array(meta.loc[[i, i_]].pos).astype(str))
-    row.ref = "_".join(np.array(meta.loc[[i, i_]].ref))
-    row.mut = "_".join(np.array(meta.loc[[i, i_]].mut))
-    row.dnSNP = np.any(meta.loc[[i, i_]].dbSNP)
-    row.REDIdb = np.any(meta.loc[[i, i_]].REDIdb)
+    rows = meta.loc[[i, i_]]
+    # merge meta
+    row.pos = "_".join(np.array(rows.pos).astype(str))
+    row.ref = "_".join(np.array(rows.ref))
+    row.mut = "_".join(np.array(rows.mut))
+    row.dnSNP, row.REDIdb = np.any(rows.dbSNP), np.any(rows.REDIdb)
     if merge_WE:
-        row.cancer_ref = np.sum(meta.loc[[i, i_]].cancer_ref)
-        row.cancer_alt = np.sum(meta.loc[[i, i_]].cancer_alt)
-        # row.cancer_cov = np.sum(meta.loc[[i, i_]].cancer_cov)
-        row.healthy_ref = np.sum(meta.loc[[i, i_]].healthy_ref)
-        row.healthy_alt = np.sum(meta.loc[[i, i_]].healthy_alt)
-        # row.healthy_cov = np.sum(meta.loc[[i, i_]].healthy_cov)
-    meta.loc[i_] = row
+        row.cancer_ref, row.cancer_alt = np.sum(rows.cancer_ref), np.sum(rows.cancer_alt)
+        row.healthy_ref, row.healthy_alt = np.sum(rows.healthy_ref), np.sum(rows.healthy_alt)
 
+    meta.loc[i_] = row
     REF.loc[i_] = np.sum(REF.loc[[i_, i]])
     ALT.loc[i_] = np.sum(ALT.loc[[i_, i]])
 

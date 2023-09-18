@@ -79,8 +79,8 @@ def merge_row(i, i_, meta, REF, ALT, merge_WE, positive):
             row.healthy_ref = np.sum((rows.healthy_ref.iloc[0], rows.healthy_alt.iloc[1]))
             row.healthy_alt = np.sum((rows.healthy_alt.iloc[0], rows.healthy_ref.iloc[1]))
 
-        REF.loc[i_] = np.sum((REF.iloc[i_], ALT.iloc[i]), axis=0)
-        ALT.loc[i_] = np.sum((ALT.iloc[i_], REF.iloc[i]), axis=0)
+        REF.loc[i_] = np.sum((REF.loc[i_], ALT.loc[i]), axis=0)
+        ALT.loc[i_] = np.sum((ALT.loc[i_], REF.loc[i]), axis=0)
 
     meta.loc[i_] = row
     meta, REF, ALT = meta.drop(i, axis=0), REF.drop(i, axis=0), ALT.drop(i, axis=0)

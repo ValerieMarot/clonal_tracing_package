@@ -30,7 +30,7 @@ def filter_vars(REF, ALT, meta,
     return REF, ALT, meta
 
 
-def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95, merge_WE=False):
+def filter_vars_from_same_read(REF, ALT, meta, dist=np.infty, pearson_corr=.95, merge_WE=False):
     VAF = REF / (REF + ALT)
 
     p = np.array(meta.pos)

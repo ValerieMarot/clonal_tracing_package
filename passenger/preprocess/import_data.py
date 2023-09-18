@@ -134,7 +134,7 @@ def get_variant_measurement_data(path,
             REF = REF[sub_cell_names]
             ALT = ALT[sub_cell_names]
 
-    return ALT, REF, meta
+    return REF, ALT, meta
 
 
 def get_WE_data(path_to_file, meta_):

@@ -46,30 +46,43 @@ def filter_vars_from_same_read(REF, ALT, meta, dist=100, pearson_corr=.95, merge
         x, y = VAF.loc[i], VAF.loc[i_]
         sub = ~(np.isnan(x) | np.isnan(y))
         if np.sum(sub) > 20:
-            if np.abs(pearsonr(x[sub], y[sub])[0]) > pearson_corr:
-                meta, REF, ALT = merge_row(i, i_, meta, REF, ALT, merge_WE=merge_WE)
+            val = pearsonr(x[sub], y[sub])[0]
+            if np.abs(val) > pearson_corr:
+                meta, REF, ALT = merge_row(i, i_, meta, REF, ALT, merge_WE=merge_WE, positive=val > 0)
                 c += 1
 
     print("filtered " + str(c))
     return REF, ALT, meta
 
 
-def merge_row(i, i_, meta, REF, ALT, merge_WE):
+def merge_row(i, i_, meta, REF, ALT, merge_WE, positive):
     row = meta.loc[i_]
     rows = meta.loc[[i, i_]]
     # merge meta
     row.pos = "_".join(np.array(rows.pos).astype(str))
-    row.ref = "_".join(np.array(rows.ref))
-    row.mut = "_".join(np.array(rows.mut))
     row.dnSNP, row.REDIdb = np.any(rows.dbSNP), np.any(rows.REDIdb)
-    if merge_WE:
-        row.cancer_ref, row.cancer_alt = np.sum(rows.cancer_ref), np.sum(rows.cancer_alt)
-        row.healthy_ref, row.healthy_alt = np.sum(rows.healthy_ref), np.sum(rows.healthy_alt)
+
+    if positive:
+        row.ref = "_".join(np.array(rows.ref))
+        row.mut = "_".join(np.array(rows.mut))
+        if merge_WE:
+            row.cancer_ref, row.cancer_alt = np.sum(rows.cancer_ref), np.sum(rows.cancer_alt)
+            row.healthy_ref, row.healthy_alt = np.sum(rows.healthy_ref), np.sum(rows.healthy_alt)
+        REF.loc[i_] = np.sum(REF.loc[[i_, i]], axis=0)
+        ALT.loc[i_] = np.sum(ALT.loc[[i_, i]], axis=0)
+    else:
+        row.ref = "_".join(np.array((rows.ref.iloc[0], rows.mut.iloc[1], "inv")))
+        row.mut = "_".join(np.array((rows.mut.iloc[0], rows.ref.iloc[1], "inv")))
+        if merge_WE:
+            row.cancer_ref = np.sum((rows.cancer_ref.iloc[0], rows.cancer_alt.iloc[1]))
+            row.cancer_alt = np.sum((rows.cancer_alt.iloc[0], rows.cancer_ref.iloc[1]))
+            row.healthy_ref = np.sum((rows.healthy_ref.iloc[0], rows.healthy_alt.iloc[1]))
+            row.healthy_alt = np.sum((rows.healthy_alt.iloc[0], rows.healthy_ref.iloc[1]))
+
+        REF.loc[i_] = np.sum((REF.iloc[i_], ALT.iloc[i]), axis=0)
+        ALT.loc[i_] = np.sum((ALT.iloc[i_], REF.iloc[i]), axis=0)
 
     meta.loc[i_] = row
-    REF.loc[i_] = np.sum(REF.loc[[i_, i]])
-    ALT.loc[i_] = np.sum(ALT.loc[[i_, i]])
-
     meta, REF, ALT = meta.drop(i, axis=0), REF.drop(i, axis=0), ALT.drop(i, axis=0)
     return meta, REF, ALT
 

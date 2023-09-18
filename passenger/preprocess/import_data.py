@@ -151,13 +151,13 @@ def get_WE_data(path_to_file, meta_):
             WE_c_entry = WE_cancer.loc[meta_pos].iloc[0]
             vals = WE_c_entry[9].split(":")[-1].split(",")
             alleles = WE_c_entry[4].split(",")
-            ref.append(vals[0])
+            ref.append(vals[0].astype(int))
             cov.append(np.sum(np.array(vals).astype(int)))
             vals = vals[1:]
             found = False
             for j, a in enumerate(alleles):
                 if a == meta_.iloc[i].mut:
-                    alt.append(vals[j])
+                    alt.append(vals[j].astype(int))
                     found = True
             if not found:
                 alt.append(0)

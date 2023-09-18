@@ -87,7 +87,7 @@ def get_variant_measurement_data(path,
             meta_0 = get_meta(path + "vcf/processed-" + chrom + "-meta.csv", path + "vcf/annotations-" + chrom + ".tsv",
                               chrom, NN_model,
                               path_to_context_data=path_to_context_data,
-                              path_to_exome_data=path_to_exome_data)
+                              path_to_exome_data=path_to_exome_data, datatype=datatype)
         else:
             try:
                 f = open(path + '/' + chrom + '/cellSNP.tag.AD.mtx', 'r')

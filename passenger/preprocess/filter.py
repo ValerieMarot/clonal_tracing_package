@@ -47,15 +47,17 @@ def filter_vars_from_same_read(REF, ALT, meta, dist=np.infty, pearson_corr=.95, 
         sub = ~(np.isnan(x) | np.isnan(y))
         if np.sum(sub) > 20:
             val = pearsonr(x[sub], y[sub])[0]
-            if np.abs(val) > pearson_corr:
-                meta, REF, ALT = merge_row(i, i_, meta, REF, ALT, merge_WE=merge_WE, positive=val > 0)
+            if val > pearson_corr:
+                REF, ALT, meta = merge_row(i, i_, REF, ALT, meta, merge_WE=merge_WE,
+                                           positive=True  #val > 0
+                                           )
                 c += 1
 
     print("filtered " + str(c))
     return REF, ALT, meta
 
 
-def merge_row(i, i_, meta, REF, ALT, merge_WE, positive):
+def merge_row(i, i_, REF, ALT, meta, merge_WE, positive):
     row = meta.loc[i_]
     rows = meta.loc[[i, i_]]
     # merge meta
@@ -84,7 +86,7 @@ def merge_row(i, i_, meta, REF, ALT, merge_WE, positive):
 
     meta.loc[i_] = row
     meta, REF, ALT = meta.drop(i, axis=0), REF.drop(i, axis=0), ALT.drop(i, axis=0)
-    return meta, REF, ALT
+    return REF, ALT, meta
 
 
 def get_pars_from_line(file, line_number):

@@ -6,10 +6,13 @@ import random
 from itertools import permutations
 
 
-def get_state(cov, M, M_high_conf=True, full_weights=False):
+def get_state(cov, M, M_high_conf=False, mode="basic"):
     # set state matrix
     S = np.zeros(cov.shape)
-    if full_weights:
+    if mode == "basic":
+        S[np.where(cov >= 2)] = 0.5
+        S[M > 0] = 1
+    elif mode == "VAF_full":
         b = 0  # prob of monoallelic expression
         for i in np.unique(cov):
             p = 1 - (b + (1 - b) * binom.pmf(k=0, n=i, p=.5))
@@ -18,14 +21,13 @@ def get_state(cov, M, M_high_conf=True, full_weights=False):
             S[M > 0] = 1
     else:
         S[np.where(cov >= 2)] = 0.5
-        S[M > 0] = 1
-    # S = np.ones(cov.shape)
+        S[M == 0.5] = 1
     return S
 
 
 def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
                  break_iteration=True,
-                 parallel=True, n_cores=None, reg=0):
+                 parallel=True, n_cores=None, reg=0, mode="basic"):
     """
 
     Parameters
@@ -53,8 +55,8 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
 
     # optional constraint
     if force_cell_assignment:
-        def con(c):
-            return np.sum(c) - 1
+        def con(c_):
+            return np.sum(c_) - 1
 
         cons = {'type': 'eq', 'fun': con}  # note: eq means that minimize forces con==1
 
@@ -69,55 +71,46 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
     T = True
     cost = []
     for i in range(max_cycles):
-        if T:
-            #########
-            # fit V #
-            #########
-            def fun_v(v, h):
-                # note: in the function we use np.clip because np.dot(v, C) can be > 1 (e.g. if a variant is associated
-                # with multiple clones, and a cell with multiple clones), but x cannot be > 1
-                # -> if we have np.dot > 1 and x==1 this should not be penalised
-                reg_ = reg * np.sum(v ** 2)
-                return np.sum(((np.clip((np.dot(v, C)), 0, 1) - X[h]) ** 2) * weights[h]) + reg_
+        if i % 100 == 0:
+            print(i)
 
-            if parallel:
-                V = parallel_run(V, v_entries, n_parts_V, fun_v, bounds, constraints=None)
+        #########
+        # fit V #
+        #########
+        def fun_v(v, h):
+            # note: in the function we use np.clip because np.dot(v, C) can be > 1 (e.g. if a variant is associated
+            # with multiple clones, and a cell with multiple clones), but x cannot be > 1
+            # -> if we have np.dot > 1 and x==1 this should not be penalised
+            reg_ = reg * np.sum(v ** 2)
+            if mode == "basic":
+                return np.sum(((np.clip(np.dot(v, C), 0, 1) - X[h]) ** 2) * weights[h]) + reg_
             else:
-                for j in np.arange(0, X.shape[0]).tolist():
-                    V[j] = op.minimize(fun_v, V[j], bounds=bounds, args=j).x
+                return np.sum(((np.dot(v, C) - X[h]) ** 2) * weights[h]) + reg_
 
-            #########
-            # fit C #
-            #########
-            def fun_c(c, h):
-                # same as above with np.clip
-                return np.sum(((np.clip((np.dot(V, c)), 0, 1) - X[:, h]) ** 2) * weights[:, h])
-
-            if parallel:
-                C = parallel_run(C, c_entries, n_parts_C, fun_c, bounds,
-                                 constraints=cons if force_cell_assignment else None, axis=1).T
-            else:
-                for j in np.arange(0, X.shape[0]).tolist():
-                    C[:, j] = op.minimize(fun_c, C[:, j], bounds=bounds,
-                                          constraints=cons if force_cell_assignment else None,
-                                          args=j).x
-
+        if parallel:
+            V = parallel_run(V, v_entries, n_parts_V, fun_v, bounds, constraints=None)
         else:
+            for j in np.arange(0, X.shape[0]).tolist():
+                V[j] = op.minimize(fun_v, V[j], bounds=bounds, args=j).x
 
-            c_shuffled, v_shuffled = np.arange(0, c_entries), np.arange(0, v_entries)
-            np.random.shuffle(c_shuffled), np.random.shuffle(v_shuffled)
-            # fit C
-            numerator, V_dot = np.dot(V.T, X), np.dot(V.T, V)
-            for c in c_shuffled:
-                for k_ in range(k):
-                    C[k_, c] = C[k_, c] * (numerator[k_, c] / (np.dot(V_dot, C)[k_, c]))
-            C[C == 0] = np.random.rand()
-            # fit V
-            numerator, C_dot = np.dot(X, C.T), np.dot(C, C.T)
-            for v in v_shuffled:
-                for k_ in range(k):
-                    V[v, k_] = V[v, k_] * (numerator[v, k_] / np.dot(V, C_dot)[v, k_])
-            V[V == 0] = np.random.rand()
+        #########
+        # fit C #
+        #########
+        def fun_c(c, h):
+            # same as above with np.clip
+            if mode == "basic":
+                return np.sum(((np.clip(np.dot(V, c), 0, 1) - X[:, h]) ** 2) * weights[:, h])
+            else:
+                return np.sum(((np.dot(V, c) - X[:, h]) ** 2) * weights[:, h])
+
+        if parallel:
+            C = parallel_run(C, c_entries, n_parts_C, fun_c, bounds,
+                             constraints=cons if force_cell_assignment else None, axis=1).T
+        else:
+            for j in np.arange(0, X.shape[0]).tolist():
+                C[:, j] = op.minimize(fun_c, C[:, j], bounds=bounds,
+                                      constraints=cons if force_cell_assignment else None,
+                                      args=j).x
 
         ###############
         # break check #
@@ -157,10 +150,12 @@ def parallel_run(in_arr, n_entries, n_parts, fun, bounds, constraints, axis=0):
     return np.array(r)
 
 
-def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=False, n_bootstrap=20, bootstrap_percent=.8,
+def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, n_bootstrap=20, bootstrap_percent=.8,
                    max_cycles=400, force_cell_assignment=False,
                    break_iteration=True,
-                   parallel=True, n_cores=None, reg=0):
+                   parallel=True, n_cores=None, reg=0,
+                   mode="basic"):
+    # mode is one of ["basic", "VAF_full", "VAF_reduced"]
     # run wNMF
     bootstrap_var = True
     n_vars = ALT.shape[0]
@@ -178,8 +173,16 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, full_weights=False, n_bootstrap=
         cov = REF_sub + ALT_sub
         M = np.zeros(REF_sub.shape)
         whr = np.where(cov >= 2)
-        M[whr] = (ALT_sub[whr] / cov[whr]) > VAF_thres
-        S = get_state(cov, M, full_weights)  # S probability matrix of seing mutation given the coverage
+        if mode == "basic":
+            M[whr] = (ALT_sub[whr] / cov[whr]) > VAF_thres
+        elif mode == "VAF_full":
+            # M contains exact VAF
+            M[whr] = (ALT_sub[whr] / cov[whr])
+        else:
+            # M contains VAF=.5 if we see ref and alt, VAF=1 if we see only ALT, VAF=0 else
+            M[whr] = ((ALT_sub[whr] >= 1) * (REF_sub[whr] >= 1) * 0.5) + \
+                     ((ALT_sub[whr] >= 1) * (REF_sub[whr] == 0) * 1)
+        S = get_state(cov, M, mode=mode)  # S probability matrix of seing mutation given the coverage
         C, V = NMF_weighted(M,
                             weights=S,
                             k=k,  # number of clusters we are looking for

@@ -78,7 +78,7 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
                 # with multiple clones, and a cell with multiple clones), but x cannot be > 1
                 # -> if we have np.dot > 1 and x==1 this should not be penalised
                 reg_ = reg * np.sum(v ** 2)
-                return np.sum((np.clip((np.dot(v, C) * weights[h]), 0, 1) - X[h]) ** 2) + reg_
+                return np.sum(((np.clip((np.dot(v, C)), 0, 1) - X[h]) ** 2) * weights[h]) + reg_
 
             if parallel:
                 V = parallel_run(V, v_entries, n_parts_V, fun_v, bounds, constraints=None)
@@ -91,11 +91,11 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
             #########
             def fun_c(c, h):
                 # same as above with np.clip
-                return np.sum((np.clip((np.dot(V, c) * weights[:, h]), 0, 1) - X[:, h]) ** 2)
+                return np.sum(((np.clip((np.dot(V, c)), 0, 1) - X[:, h]) ** 2) * weights[:, h])
 
             if parallel:
                 C = parallel_run(C, c_entries, n_parts_C, fun_c, bounds,
-                                  constraints=cons if force_cell_assignment else None, axis=1).T
+                                 constraints=cons if force_cell_assignment else None, axis=1).T
             else:
                 for j in np.arange(0, X.shape[0]).tolist():
                     C[:, j] = op.minimize(fun_c, C[:, j], bounds=bounds,
@@ -122,9 +122,10 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
         ###############
         # break check #
         ###############
-        cost.append(np.sum((np.clip((np.dot(V, C) * weights), 0, 1) - X) ** 2))
+        cost.append(np.sum(((np.clip((np.dot(V, C)), 0, 1) - X) ** 2) * weights))
         if (i % 10 == 0) & (i > 0):
-            if (np.mean(cost[i - 10:i-5]) - np.mean(cost[i - 4:i]))<0:
+            if (np.mean(cost[i - 10:i - 5]) - np.mean(cost[i - 4:i])) < 0:
+                print("breaking at iteration " + i)
                 break
     # print(np.sum(V ** 2))
     print(i)

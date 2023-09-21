@@ -6,7 +6,7 @@ import random
 from itertools import permutations
 
 
-def geit_state(cov, M, M_high_conf=False, mode="basic"):
+def get_state(cov, M, M_high_conf=False, mode="basic"):
     # set state matrix
     S = np.zeros(cov.shape)
     if mode == "basic":

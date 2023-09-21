@@ -6,7 +6,7 @@ import random
 from itertools import permutations
 
 
-def get_state(cov, M, M_high_conf=False, mode="basic"):
+def geit_state(cov, M, M_high_conf=False, mode="basic"):
     # set state matrix
     S = np.zeros(cov.shape)
     if mode == "basic":
@@ -118,7 +118,7 @@ def NMF_weighted(X, weights, k=2, max_cycles=25, force_cell_assignment=False,
         cost.append(np.sum(((np.clip((np.dot(V, C)), 0, 1) - X) ** 2) * weights))
         if (i % 10 == 0) & (i > 0):
             if (np.mean(cost[i - 10:i - 5]) - np.mean(cost[i - 4:i])) < 0:
-                print("breaking at iteration " + i)
+                print("breaking at iteration " + str(i))
                 break
     # print(np.sum(V ** 2))
     print(i)

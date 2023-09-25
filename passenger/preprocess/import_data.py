@@ -18,7 +18,7 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
     ann_0.columns = ["chr", "pos", "allele", "gene", "feature", "feature_type", "consequence", "AA", "Codons",
                      "Existing_variation", "effect", "REDIdb", "AF", "dbSNP-common"]
     ann_0["pos"] = [int(i.split(":")[1]) for i in ann_0["pos"]]
-
+    ann_0["cons"] = ann_0["gene"]+ann_0["consequence"]
     # filter
     print(meta_0.shape)
     REDIdb = np.ones(meta_0.shape[0]).astype(bool)
@@ -31,8 +31,8 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
         REDIdb[i] = np.any(ann_0.iloc[idx]["REDIdb"]!="-")
         print(np.any(ann_0.iloc[idx]["REDIdb"])!="-")
         dbSNP[i] = np.any(ann_0.iloc[idx]["dbSNP-common"]!="-")
-        gene[i] = ",".join(np.unique(ann_0.iloc[idx]["gene"]))
-        print(",".join(np.unique(ann_0.iloc[idx]["gene"])))
+        gene[i] = ",".join(np.unique(ann_0.iloc[idx]["cons"]))
+        print(",".join(np.unique(ann_0.iloc[idx]["cons"])))
         break
 
     meta_0["REDIdb"] = REDIdb

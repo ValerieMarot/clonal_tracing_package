@@ -20,13 +20,14 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
     ann_0["pos"] = [int(i.split(":")[1]) for i in ann_0["pos"]]
 
     # filter
+    print(meta_0.shape)
     REDIdb = np.ones(meta_0.shape[0])
     dbSNP = np.ones(meta_0.shape[0])
-    gene = np.repeat("",meta_0.shape[0])
+    gene = np.repeat("", meta_0.shape[0])
     for i, pos in enumerate(meta_0.pos):
         idx = np.where(ann_0["pos"] == pos)[0]
         REDIdb[i] = np.any(ann_0.iloc[idx]["REDIdb"])
-        dbSNP[i] = np.any(ann_0.iloc[idx]["dbSNP"])
+        dbSNP[i] = np.any(ann_0.iloc[idx]["dbSNP-common"])
         gene[i] = ",".join(np.unique(ann_0.iloc[idx]["gene"]))
 
     meta_0["REDIdb"] = REDIdb
@@ -92,26 +93,26 @@ def get_variant_measurement_data(path,
                               path_to_context_data=path_to_context_data,
                               path_to_exome_data=path_to_exome_data, datatype=datatype)
         else:
-            #try:
-                f = open(path + '/' + chrom + '/cellSNP.tag.AD.mtx', 'r')
-                ALT_0 = pd.DataFrame(mmread(f).A)
+            # try:
+            f = open(path + '/' + chrom + '/cellSNP.tag.AD.mtx', 'r')
+            ALT_0 = pd.DataFrame(mmread(f).A)
 
-                f = open(path + '/' + chrom + '/cellSNP.tag.DP.mtx', 'r')
-                DP = pd.DataFrame(mmread(f).A)
+            f = open(path + '/' + chrom + '/cellSNP.tag.DP.mtx', 'r')
+            DP = pd.DataFrame(mmread(f).A)
 
-                # f = open(path+'/'+chrom+'cellSNP.tag.OTH.mtx', 'r')
-                # OTH = mmread(f).A
+            # f = open(path+'/'+chrom+'cellSNP.tag.OTH.mtx', 'r')
+            # OTH = mmread(f).A
 
-                REF_0 = DP - ALT_0
+            REF_0 = DP - ALT_0
 
-                meta_0 = get_meta(path + '/' + chrom + '/cellSNP.base.vcf', path + '/' + chrom + '/annotations.tsv',
-                                  chrom, NN_model,
-                                  path_to_context_data=path_to_context_data,
-                                  path_to_exome_data=path_to_exome_data,
-                                  datatype=datatype)
-            #except:
-                print("BROKEN CHROM " + chrom + "\n\n")
-                skip = True
+            meta_0 = get_meta(path + '/' + chrom + '/cellSNP.base.vcf', path + '/' + chrom + '/annotations.tsv',
+                              chrom, NN_model,
+                              path_to_context_data=path_to_context_data,
+                              path_to_exome_data=path_to_exome_data,
+                              datatype=datatype)
+            # except:
+            print("BROKEN CHROM " + chrom + "\n\n")
+            skip = True
 
         # variants need to be covered in at least 10% of the cells
         sub = np.sum((ALT_0 + REF_0) >= 2, axis=1) > (ALT_0.shape[1] / 10)

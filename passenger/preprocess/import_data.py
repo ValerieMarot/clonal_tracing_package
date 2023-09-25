@@ -17,18 +17,21 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
     ann_0.insert(0, 'chr', np.repeat(chrom, ann_0.shape[0]))
     ann_0.columns = ["chr", "pos", "allele", "gene", "feature", "feature_type", "consequence", "AA", "Codons",
                      "Existing_variation", "effect", "REDIdb", "AF", "dbSNP-common"]
+    ann_0["pos"] = [int(i.split(":")[1]) for i in ann_0["pos"]]
 
     # filter
-    ann_0["pos"] = [i.split(":")[1] for i in ann_0["pos"]]
-    to_drop = (ann_0["REDIdb"] != "-")
-    pos = np.unique(ann_0.loc[to_drop]["pos"].tolist()).astype('int64')
-    sub_ = [i in pos for i in meta_0.pos]
-    meta_0["REDIdb"] = sub_
+    REDIdb = np.ones(meta_0.shape[0])
+    dbSNP = np.ones(meta_0.shape[0])
+    gene = np.repeat("",meta_0.shape[0])
+    for i, pos in enumerate(meta_0.pos):
+        idx = np.where(ann_0["pos"] == pos)[0]
+        REDIdb[i] = np.any(ann_0.iloc[idx]["REDIdb"])
+        dbSNP[i] = np.any(ann_0.iloc[idx]["dbSNP"])
+        gene[i] = ",".join(np.unique(ann_0.iloc[idx]["gene"]))
 
-    to_drop |= (ann_0["dbSNP-common"] != "-")
-    pos = np.unique(ann_0.loc[to_drop]["pos"].tolist()).astype('int64')
-    sub_ = [i in pos for i in meta_0.pos]
-    meta_0["dbSNP"] = sub_
+    meta_0["REDIdb"] = REDIdb
+    meta_0["dbSNP"] = dbSNP
+    meta_0["gene"] = gene
 
     if NN_model is not None:
         rows = []

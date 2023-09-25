@@ -195,10 +195,7 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, n_bootstrap=20, bootstrap_percen
             V_[idx] = V
             V = V_
         C_all.append(C), V_all.append(V)
-    C_all = np.array(C_all)
-    V_all = np.array(V_all)
-    print(C_all.shape)
-    print(V_all.shape)
+    C_all, V_all = np.array(C_all), np.array(V_all)
     # align the NMF runs
     clus1 = np.argmax(C_all[0], axis=0)
     perm = list(permutations(np.arange(0, k)))
@@ -209,17 +206,15 @@ def bootstrap_wNMF(REF, ALT, k=2, VAF_thres=.2, n_bootstrap=20, bootstrap_percen
             for h in range(k):
                 d[j, h] = (np.sum((clus1 == j) & (clus2 == h)))
         p = [perm[np.argmax(np.sum(d[np.arange(0, k), perm], axis=1))]]
-        print(p)
         C_all[i] = C_all[i][p][0]
         V_all[i] = V_all[i].T[p][0].T
-    aggr = np.sum(np.argmax(C_all, axis=1), axis=0)
-    conf = 1 - np.min((binom.cdf(aggr, n_bootstrap, 1 / k),
-                       binom.cdf(n_bootstrap - aggr, n_bootstrap, 1 / k)), axis=0)
+
     C = np.mean(np.array(C_all), axis=0)
+    C_std = np.nanstd(C_all, axis=0)
     V = np.nanmean(V_all, axis=0)
     V_std = np.nanstd(V_all, axis=0)
 
-    return C, conf, V, V_std
+    return C, C_std, V, V_std
 
 
 def subsample(mat, bootstrap_percent):

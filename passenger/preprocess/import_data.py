@@ -92,7 +92,7 @@ def get_variant_measurement_data(path,
                               path_to_context_data=path_to_context_data,
                               path_to_exome_data=path_to_exome_data, datatype=datatype)
         else:
-            try:
+            #try:
                 f = open(path + '/' + chrom + '/cellSNP.tag.AD.mtx', 'r')
                 ALT_0 = pd.DataFrame(mmread(f).A)
 
@@ -109,7 +109,7 @@ def get_variant_measurement_data(path,
                                   path_to_context_data=path_to_context_data,
                                   path_to_exome_data=path_to_exome_data,
                                   datatype=datatype)
-            except:
+            #except:
                 print("BROKEN CHROM " + chrom + "\n\n")
                 skip = True
 

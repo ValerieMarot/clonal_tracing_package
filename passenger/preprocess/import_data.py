@@ -28,10 +28,11 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
         idx = np.where(ann_0["pos"] == pos)[0]
         print(idx)
         print(ann_0.iloc[idx])
-        REDIdb[i] = np.any(ann_0.iloc[idx]["REDIdb"])
-        print(np.any(ann_0.iloc[idx]["REDIdb"]))
-        dbSNP[i] = np.any(ann_0.iloc[idx]["dbSNP-common"])
+        REDIdb[i] = np.any(ann_0.iloc[idx]["REDIdb"]!="-")
+        print(np.any(ann_0.iloc[idx]["REDIdb"])!="-")
+        dbSNP[i] = np.any(ann_0.iloc[idx]["dbSNP-common"]!="-")
         gene[i] = ",".join(np.unique(ann_0.iloc[idx]["gene"]))
+        print(",".join(np.unique(ann_0.iloc[idx]["gene"])))
         break
 
     meta_0["REDIdb"] = REDIdb

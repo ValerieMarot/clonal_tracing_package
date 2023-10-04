@@ -113,7 +113,7 @@ def get_variant_measurement_data(path,
                               datatype=datatype)
 
         # variants need to be covered in at least 10% of the cells
-        sub = np.sum((ALT_0 + REF_0) >= 2, axis=1) > (ALT_0.shape[1] / 10)
+        sub = np.sum((ALT_0 + REF_0) >= 2, axis=1) > (ALT_0.shape[1] / 20)
         ALT_0, REF_0, meta_0 = ALT_0[sub], REF_0[sub], meta_0[sub]
         if not skip:
             ALT = ALT_0 if ALT is None else pd.concat((ALT, ALT_0))

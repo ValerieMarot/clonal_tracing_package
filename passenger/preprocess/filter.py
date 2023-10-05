@@ -26,12 +26,17 @@ def filter_vars(REF, ALT, meta,
     int_pos = np.array([int(i) for i in meta.pos.tolist()])
     in_region = (meta.chr=="chr6") & (int_pos>28510120) & (int_pos<33480577)
     print(np.sum(in_region), " vars in HLA regions" )
+    print(np.sum(sub))
     sub &= ~in_region
     # subset
+    
     print("Filtering \t" + str(np.sum(~sub)) + " variants.")
     print("Keeping \t" + str(np.sum(sub)) + " variants.")
     REF, ALT = REF.loc[sub], ALT.loc[sub]
     meta = meta.loc[sub]
+    int_pos = np.array([int(i) for i in meta.pos.tolist()])
+    in_region = (meta.chr=="chr6") & (int_pos>28510120) & (int_pos<33480577)
+    print(np.sum(in_region))
     return REF, ALT, meta
 
 

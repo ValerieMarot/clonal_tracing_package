@@ -22,11 +22,21 @@ def filter_vars(REF, ALT, meta,
             sub &= (meta["NN_pred_real"] > filter_artefacts_thres)
         else:
             sub &= (meta["NN_pred_real"] < -filter_artefacts_thres)
+    # filter variants found in MHC regions
+    int_pos = np.array([int(i) for i in meta.pos.tolist()])
+    in_region = (meta.chr=="chr6") & (int_pos>28510120) & (int_pos<33480577)
+    print(np.sum(in_region), " vars in HLA regions" )
+    print(np.sum(sub))
+    sub &= ~in_region
+    # subset
+    
     print("Filtering \t" + str(np.sum(~sub)) + " variants.")
     print("Keeping \t" + str(np.sum(sub)) + " variants.")
-    # subset
     REF, ALT = REF.loc[sub], ALT.loc[sub]
     meta = meta.loc[sub]
+    int_pos = np.array([int(i) for i in meta.pos.tolist()])
+    in_region = (meta.chr=="chr6") & (int_pos>28510120) & (int_pos<33480577)
+    print(np.sum(in_region))
     return REF, ALT, meta
 
 

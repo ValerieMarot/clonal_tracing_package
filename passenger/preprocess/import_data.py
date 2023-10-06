@@ -106,7 +106,7 @@ def get_variant_measurement_data(path,
                               datatype=datatype)
 
         # variants need to be covered in at least 10% of the cells
-        sub = np.sum((ALT_0 + REF_0) >= 2, axis=1) > (ALT_0.shape[1] / 10)
+        sub = np.sum((ALT_0 + REF_0) >= 2, axis=1) > (ALT_0.shape[1] / 20)
         ALT_0, REF_0, meta_0 = ALT_0[sub], REF_0[sub], meta_0[sub]
         if not skip:
             ALT = ALT_0 if ALT is None else pd.concat((ALT, ALT_0))
@@ -128,7 +128,12 @@ def get_variant_measurement_data(path,
         if sub_cell_names is not None:
             REF = REF[sub_cell_names]
             ALT = ALT[sub_cell_names]
-
+    int_pos = np.array([int(i) for i in meta.pos.tolist()])
+    in_region = (meta.chr=="chr6") & (int_pos>28510120) & (int_pos<33480577)
+    print(np.sum(in_region), " vars in HLA regions" )
+    sub = ~in_region
+    REF, ALT = REF.loc[sub], ALT.loc[sub]
+    meta = meta.loc[sub]
     return REF, ALT, meta
 
 

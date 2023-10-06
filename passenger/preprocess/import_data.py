@@ -18,7 +18,7 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
     ann_0.columns = ["chr", "pos", "allele", "gene", "feature", "feature_type", "consequence", "AA", "Codons",
                      "Existing_variation", "effect", "REDIdb", "AF", "dbSNP-common"]
     ann_0["pos"] = [int(i.split(":")[1]) for i in ann_0["pos"]]
-    ann_0["cons"] = ann_0["gene"]+":"+ann_0["consequence"]
+    ann_0["cons"] = ann_0["gene"] + ":" + ann_0["consequence"]
     # filter
     print(meta_0.shape)
     REDIdb = np.ones(meta_0.shape[0]).astype(bool)
@@ -26,18 +26,11 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
     gene = np.repeat("", meta_0.shape[0]).astype(str)
     for i, pos in enumerate(meta_0.pos):
         idx = np.where(ann_0["pos"] == pos)[0]
-        #print(idx)
-        #print(ann_0.iloc[idx])
-        REDIdb[i] = np.any(ann_0.iloc[idx]["REDIdb"]!="-")
-        #print(np.any(ann_0.iloc[idx]["REDIdb"])!="-")
-        dbSNP[i] = np.any(ann_0.iloc[idx]["dbSNP-common"]!="-")
+        REDIdb[i] = np.any(ann_0.iloc[idx]["REDIdb"] != "-")
+        dbSNP[i] = np.any(ann_0.iloc[idx]["dbSNP-common"] != "-")
         gene[i] = ",".join(np.unique(ann_0.iloc[idx]["cons"]))
-        #print(",".join(np.unique(ann_0.iloc[idx]["cons"])))
-        #break
 
-    meta_0["REDIdb"] = REDIdb
-    meta_0["dbSNP"] = dbSNP
-    meta_0["gene"] = gene
+    meta_0["REDIdb"], meta_0["dbSNP"], meta_0["gene"] = REDIdb, dbSNP, gene
 
     if NN_model is not None:
         rows = []

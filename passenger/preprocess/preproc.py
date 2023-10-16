@@ -1,4 +1,4 @@
-from passenger.preprocess.import_data import get_variant_measurement_data
+from passenger.preprocess.import_data import get_variant_measurement_data, filter_vars_from_same_read
 from passenger.preprocess.filter import *
 import numpy as np
 

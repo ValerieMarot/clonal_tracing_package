@@ -3,40 +3,28 @@ from scipy.stats import pearsonr
 
 
 def filter_vars(REF, ALT, meta,
-                VAF_thres=.2,
-                filter_germline=True, filter_RNA_edits=True,
-                filter_artefacts_thres=0,
+                filter_germline=True,
+                filter_RNA_edits=True,
                 filter_ref_alt_cells=5):
     f_r_a_c = (filter_ref_alt_cells / 100) * ALT.shape[1]
     # only keep variants seen and NOT seen in at least min_ref_alt_cells cells
     # i.e. kick out variants seen in almost all or almost no cells
-    sub = (np.sum(((ALT / (REF + ALT)) > VAF_thres) & (ALT >= 2), axis=1) >= f_r_a_c)
-    sub &= (np.sum(((REF / (REF + ALT)) > VAF_thres) & (REF >= 2), axis=1) >= f_r_a_c)
+    only_REF = np.sum((REF >= 2) & (ALT <= 2), axis=1)
+    only_ALT = np.sum((REF <= 2) & (ALT >= 2), axis=1)
+    REF_and_ALT = np.sum((REF >= 2) & (ALT >= 2), axis=1)
+    sub = (only_ALT >= f_r_a_c) & (only_REF >= f_r_a_c)
+    sub |= (only_ALT >= f_r_a_c) & (REF_and_ALT >= f_r_a_c)
+    sub |= (only_REF >= f_r_a_c) & (REF_and_ALT >= f_r_a_c)
     # only keep variants covered in at least min_cov_cells  cells
     if filter_germline:  # filter germline variants
         sub &= ~meta.dbSNP
     if filter_RNA_edits:  # filter RNA edits
         sub &= ~meta.REDIdb
-    if filter_artefacts_thres != 0:  # filter variants thought to be artefacts
-        if filter_artefacts_thres > 0:
-            sub &= (meta["NN_pred_real"] > filter_artefacts_thres)
-        else:
-            sub &= (meta["NN_pred_real"] < -filter_artefacts_thres)
-    # filter variants found in MHC regions
-    int_pos = np.array([int(i) for i in meta.pos.tolist()])
-    in_region = (meta.chr=="chr6") & (int_pos>28510120) & (int_pos<33480577)
-    print(np.sum(in_region), " vars in HLA regions" )
-    print(np.sum(sub))
-    sub &= ~in_region
     # subset
-    
     print("Filtering \t" + str(np.sum(~sub)) + " variants.")
     print("Keeping \t" + str(np.sum(sub)) + " variants.")
     REF, ALT = REF.loc[sub], ALT.loc[sub]
     meta = meta.loc[sub]
-    int_pos = np.array([int(i) for i in meta.pos.tolist()])
-    in_region = (meta.chr=="chr6") & (int_pos>28510120) & (int_pos<33480577)
-    print(np.sum(in_region))
     return REF, ALT, meta
 
 

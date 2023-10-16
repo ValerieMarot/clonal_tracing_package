@@ -126,9 +126,8 @@ def NMF_weighted(X, weights, k=2, max_cycles=1000,
 
 def parallel_run(in_arr, n_entries, n_parts, fun, bounds, n_jobs, axis=0):
     """
-    Helper function to run minimize in parallel. This is needed to send and fetch the running block to the CPU.
+    Helper function to run minimize in parallel. This is needed to format, send and fetch the running block to the CPU.
     """
-    # todo make this easier to read?
     # prepare input
     pars = []
     for j in range(n_entries):
@@ -140,7 +139,6 @@ def parallel_run(in_arr, n_entries, n_parts, fun, bounds, n_jobs, axis=0):
         for p in pars_:
             out.append(op.minimize(fun, p[0], bounds=bounds, args=p[1]).x)
         return out
-
     n_ = int(np.ceil(n_entries / n_parts))
     result = Parallel(n_jobs=n_jobs, backend="loky")(
         delayed(fit_helper)(pars[i:i + n_]) for i in range(0, n_entries, n_))

@@ -1,10 +1,15 @@
 import pandas as pd
 import numpy as np
-from passenger.preprocess.import_sequence_context import get_variant_as_matrix, is_non_zero_file
+# from passenger.preprocess.import_sequence_context import get_variant_as_matrix, is_non_zero_file
 from scipy.io import mmread
+import os
 
 
-def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, path_to_exome_data,
+def is_non_zero_file(fpath):
+    return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
+
+
+def get_meta(meta_file, annotation_file, chrom, path_to_exome_data,
              datatype):
     if datatype == "S2":
         meta_0 = pd.read_csv(meta_file, index_col=False)
@@ -32,15 +37,6 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
 
     meta_0["REDIdb"], meta_0["dbSNP"], meta_0["gene"] = REDIdb, dbSNP, gene
 
-    if NN_model is not None:
-        rows = []
-        for i in range(meta_0.shape[0]):
-            entry = meta_0.iloc[i]
-            data = get_variant_as_matrix(entry["chr"], entry["pos"], window=30, path=path_to_context_data)
-            rows.append(data)
-        rows = np.array(rows)
-        pred = NN_model.predict(rows)
-        meta_0["NN_pred_real"] = pred[:, 1]
     if path_to_exome_data is not None:
         cancer_file = path_to_exome_data + "cancer-filtered-var-pileup-" + chrom + ".vcf"
         healthy_file = path_to_exome_data + "healthy-filtered-var-pileup-" + chrom + ".vcf"
@@ -56,29 +52,14 @@ def get_meta(meta_file, annotation_file, chrom, NN_model, path_to_context_data, 
     return meta_0
 
 
-def load_NN_model(model):
-    from tensorflow import keras
-
-    model = keras.models.load_model(model)
-    prob_model = keras.models.Sequential([model, keras.layers.Softmax()])
-    return prob_model
-
-
 def get_variant_measurement_data(path,
                                  all_chroms=None,
                                  cell_names=None,
-                                 NN_filter_artefacts_path=None,
-                                 path_to_context_data="",
                                  path_to_exome_data=None,
                                  datatype="S2",
                                  sub_cell_names=None):
     meta, ann, ALT, REF = None, None, None, None
     all_chroms = ["chr" + str(i) for i in range(1, 23)] if all_chroms is None else all_chroms
-
-    if NN_filter_artefacts_path is not None:
-        NN_model = load_NN_model(NN_filter_artefacts_path)
-    else:
-        NN_model = None
 
     for chrom in all_chroms:
         print(chrom)
@@ -87,8 +68,7 @@ def get_variant_measurement_data(path,
             ALT_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-ALT.csv", index_col=False, header=None)
             REF_0 = pd.read_csv(path + "vcf/processed-" + chrom + "-REF.csv", index_col=False, header=None)
             meta_0 = get_meta(path + "vcf/processed-" + chrom + "-meta.csv", path + "vcf/annotations-" + chrom + ".tsv",
-                              chrom, NN_model,
-                              path_to_context_data=path_to_context_data,
+                              chrom,
                               path_to_exome_data=path_to_exome_data, datatype=datatype)
         else:
             f = open(path + '/' + chrom + '/cellSNP.tag.AD.mtx', 'r')
@@ -100,8 +80,7 @@ def get_variant_measurement_data(path,
             REF_0 = DP - ALT_0
 
             meta_0 = get_meta(path + '/' + chrom + '/cellSNP.base.vcf', path + '/' + chrom + '/annotations.tsv',
-                              chrom, NN_model,
-                              path_to_context_data=path_to_context_data,
+                              chrom,
                               path_to_exome_data=path_to_exome_data,
                               datatype=datatype)
 
@@ -129,8 +108,8 @@ def get_variant_measurement_data(path,
             REF = REF[sub_cell_names]
             ALT = ALT[sub_cell_names]
     int_pos = np.array([int(i) for i in meta.pos.tolist()])
-    in_region = (meta.chr=="chr6") & (int_pos>28510120) & (int_pos<33480577)
-    print(np.sum(in_region), " vars in HLA regions" )
+    in_region = (meta.chr == "chr6") & (int_pos > 28510120) & (int_pos < 33480577)
+    print(np.sum(in_region), " vars in HLA regions")
     sub = ~in_region
     REF, ALT = REF.loc[sub], ALT.loc[sub]
     meta = meta.loc[sub]

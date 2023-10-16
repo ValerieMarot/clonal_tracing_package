@@ -10,4 +10,4 @@ def preproc_and_save(in_path, out_path, cell_names, datatype, path_to_exome_data
                                                   cell_names=cell_names)
     REF, ALT, meta = filter_vars_from_same_read(REF, ALT, meta, dist=np.infty,
                                                 merge_WE=True if path_to_exome_data is not None else False)
-    ALT.to_csv(out_path + "/ALT.csv"), REF.to_csv(out_path + "/REF.csv"), meta.to_csv(out_path + "/meta.csv")
+    ALT.to_csv(out_path + "_ALT.csv"), REF.to_csv(out_path + "_REF.csv"), meta.to_csv(out_path + "_meta.csv")

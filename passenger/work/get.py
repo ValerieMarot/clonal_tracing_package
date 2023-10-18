@@ -3,10 +3,10 @@ import numpy as np
 from passenger.preprocess.filter import get_pars_from_line, filter_vars
 
 
-def get_raw_data(path, patient, filter_germline=None, filter_ref_alt_cells=None):
-    ALT = pd.read_csv(path + patient + "_ALT.csv", index_col=0)
-    REF = pd.read_csv(path + patient + "_REF.csv", index_col=0)
-    meta = pd.read_csv(path + patient + "_meta.csv", index_col=0)
+def get_raw_data(raw_prefix, filter_germline=None, filter_ref_alt_cells=None):
+    ALT = pd.read_csv(raw_prefix + "ALT.csv", index_col=0)
+    REF = pd.read_csv(raw_prefix + "REF.csv", index_col=0)
+    meta = pd.read_csv(raw_prefix + "meta.csv", index_col=0)
 
     if filter_germline is not None and filter_ref_alt_cells is not None:
         REF, ALT, meta = filter_vars(REF, ALT, meta, filter_germline=filter_germline,
@@ -24,13 +24,13 @@ def get_run_data(file_prefix):
     return C, C_std, V, V_std, meta
 
 
-def get_best_run(patient, run_dir, raw_prefix, parfile, k=2):
+def get_best_run(run_prefix, raw_prefix, parfile, k=2):
     best_score, best_line = 0, -1
     C, V, V_std, meta = None, None, None, None
 
     for i in np.arange(1, 7):
         filter_germline, filter_ref_alt_cells = get_pars_from_line(parfile, i)
-        file_prefix = run_dir + patient + "_" + str(filter_germline) + "_" + str(filter_ref_alt_cells)
+        file_prefix = run_prefix + "_" + str(filter_germline) + "_" + str(filter_ref_alt_cells)
         C_, C_std_, V_, V_std_, meta_ = get_run_data(file_prefix)
 
         if V_.shape[0] > 100:
@@ -45,7 +45,7 @@ def get_best_run(patient, run_dir, raw_prefix, parfile, k=2):
     readme = "best run:" + str(best_line) + "\nwith score:" + str(best_score) + "\n"
 
     filter_germline, filter_ref_alt_cells = get_pars_from_line(parfile, best_line)
-    REF, ALT, _ = get_raw_data(raw_prefix, patient, filter_germline, filter_ref_alt_cells)
+    REF, ALT, _ = get_raw_data(raw_prefix, filter_germline, filter_ref_alt_cells)
     cell_assignments = pd.DataFrame(C.T, index=ALT.columns)
 
     return cell_assignments, C_std, V, V_std, REF, ALT, meta, readme

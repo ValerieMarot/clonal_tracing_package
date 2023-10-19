@@ -56,7 +56,7 @@ def get_variant_measurement_data(path,
                                  cell_names=None,
                                  path_to_exome_data=None,
                                  datatype="S2",
-                                 sub_cell_names=None):
+                                 sub_cell_names=None, perc=10):
     meta, ann, ALT, REF = None, None, None, None
     all_chroms = ["chr" + str(i) for i in range(1, 23)] if all_chroms is None else all_chroms
 
@@ -83,7 +83,7 @@ def get_variant_measurement_data(path,
                               datatype=datatype)
 
         # variants need to be covered in at least 10% of the cells
-        sub = np.sum((ALT_0 + REF_0) >= 2, axis=1) > (ALT_0.shape[1] / 10)
+        sub = np.sum((ALT_0 + REF_0) >= 2, axis=1) > (ALT_0.shape[1] / perc)
         ALT_0, REF_0, meta_0 = ALT_0[sub], REF_0[sub], meta_0[sub]
 
         print(meta_0.shape)

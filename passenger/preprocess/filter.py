@@ -21,6 +21,7 @@ def filter_vars(REF, ALT, meta,
     if filter_RNA_edits:  # filter RNA edits
         sub &= ~meta.REDIdb
     # subset
+    sub |= meta.chr == "chrM"
     print("Filtering \t" + str(np.sum(~sub)) + " variants.")
     print("Keeping \t" + str(np.sum(sub)) + " variants.")
     REF, ALT = REF.loc[sub], ALT.loc[sub]

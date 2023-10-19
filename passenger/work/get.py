@@ -26,7 +26,7 @@ def get_run_data(file_prefix):
 
 def get_best_run(run_prefix, raw_prefix, parfile, k=2):
     best_score, best_line = 0, -1
-    C, C_std, V, V_std, meta = None, None, None, None
+    C, C_std, V, V_std, meta = None, None, None, None, None
 
     for i in np.arange(1, 7):
         filter_germline, filter_ref_alt_cells = get_pars_from_line(parfile, i)

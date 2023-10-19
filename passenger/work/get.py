@@ -45,7 +45,7 @@ def get_best_run(run_prefix, raw_prefix, parfile, k=2):
     readme = (best_line, best_score)
 
     filter_germline, filter_ref_alt_cells = get_pars_from_line(parfile, best_line)
-    REF, ALT, _ = get_raw_data(raw_prefix, filter_germline, filter_ref_alt_cells) if raw_prefix is not None else None, None, None
+    REF, ALT, _ = get_raw_data(raw_prefix, filter_germline, filter_ref_alt_cells)
     cell_assignments = pd.DataFrame(C.T, index=ALT.columns)
 
     return cell_assignments, C_std, V, V_std, REF, ALT, meta, readme

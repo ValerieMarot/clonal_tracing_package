@@ -56,7 +56,8 @@ def get_variant_measurement_data(path,
                                  cell_names=None,
                                  path_to_exome_data=None,
                                  datatype="S2",
-                                 sub_cell_names=None, perc=10):
+                                 sub_cell_names=None, perc=10,
+                                 filter_hela=True):
     meta, ann, ALT, REF = None, None, None, None
     all_chroms = ["chr" + str(i) for i in range(1, 23)] if all_chroms is None else all_chroms
 
@@ -107,10 +108,11 @@ def get_variant_measurement_data(path,
         if sub_cell_names is not None:
             REF = REF[sub_cell_names]
             ALT = ALT[sub_cell_names]
-    int_pos = np.array([int(i) for i in meta.pos.tolist()])
-    in_region = (meta.chr == "chr6") & (int_pos > 28510120) & (int_pos < 33480577)
-    print(np.sum(in_region), " vars in HLA regions")
-    sub = ~in_region
+    if filter_hela:
+        int_pos = np.array([int(i) for i in meta.pos.tolist()])
+        in_region = (meta.chr == "chr6") & (int_pos > 28510120) & (int_pos < 33480577)
+        print(np.sum(in_region), " vars in HLA regions")
+        sub = ~in_region
     REF, ALT = REF.loc[sub], ALT.loc[sub]
     meta = meta.loc[sub]
     return REF, ALT, meta

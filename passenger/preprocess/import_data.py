@@ -113,8 +113,8 @@ def get_variant_measurement_data(path,
         in_region = (meta.chr == "chr6") & (int_pos > 28510120) & (int_pos < 33480577)
         print(np.sum(in_region), " vars in HLA regions")
         sub = ~in_region
-    REF, ALT = REF.loc[sub], ALT.loc[sub]
-    meta = meta.loc[sub]
+        REF, ALT = REF.loc[sub], ALT.loc[sub]
+        meta = meta.loc[sub]
     return REF, ALT, meta
 
 

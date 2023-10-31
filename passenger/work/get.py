@@ -51,3 +51,21 @@ def get_best_run(run_prefix, raw_prefix, parfile, k=2):
     return cell_assignments, C_std, V, V_std, REF, ALT, meta, readme
 
 
+def get_best_run_multik(run_prefix, patient, raw_prefix, parfile):
+    run_prefix_k2 = run_prefix + "k2_" + patient
+    cell_assignments, C_std, V, V_std, REF, ALT, meta, readme = get_best_run(run_prefix_k2, raw_prefix, parfile, k=2)
+    try:
+        run_prefix_k3 = run_prefix + "k3_" + patient
+        pars = get_best_run(run_prefix_k3, raw_prefix, parfile, k=3)
+        k3 = pars[0]
+        corr = np.array([np.corrcoef(k3[0], k3[1])[1, 0],
+                         np.corrcoef(k3[0], k3[2])[1, 0],
+                         np.corrcoef(k3[2], k3[1])[1, 0]])
+        n_cells = np.unique(np.argmax(k3, axis=1), return_counts=True)[1]
+
+        if np.all(corr < 0) & np.all(n_cells > .05 * np.sum(n_cells)):
+            cell_assignments, C_std, V, V_std, REF, ALT, meta, readme = pars
+    except FileNotFoundError:
+        print("No run for k 3")
+
+    return cell_assignments, C_std, V, V_std, REF, ALT, meta, readme

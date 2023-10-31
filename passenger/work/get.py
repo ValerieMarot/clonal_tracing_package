@@ -34,8 +34,10 @@ def get_best_run(run_prefix, raw_prefix, parfile, k=2):
         C_, C_std_, V_, V_std_, meta_ = get_run_data(file_prefix)
 
         if V_.shape[0] > 100:
-            c2_ = (C_ / np.sum(C_, axis=0))
-            new_score = np.nanmean(np.abs((1 / k) - c2_) * np.abs((1 / k) - C_))
+            new_score = np.nanmean(np.abs(C_[0] - C_[1]))
+            if k == 3:
+                alldists = np.array((C_[0] - C_[1], C_[2] - C_[1], C_[0] - C_[2]))
+                new_score = np.nanmean(np.abs(alldists))
             print(i, "\t", np.round(new_score, 2))
             if best_score < new_score:
                 C, C_std, V, V_std, meta = C_, C_std_, V_, V_std_, meta_

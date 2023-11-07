@@ -22,6 +22,7 @@ def filter_vars(REF, ALT, meta,
         sub &= ~meta.REDIdb
     # subset
     sub |= meta.chr == "chrM"
+    sub &= meta.ref != "N"
     print("Filtering \t" + str(np.sum(~sub)) + " variants.")
     print("Keeping \t" + str(np.sum(sub)) + " variants.")
     REF, ALT = REF.loc[sub], ALT.loc[sub]

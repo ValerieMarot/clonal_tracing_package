@@ -69,5 +69,6 @@ def get_best_run_multik(run_prefix, patient, raw_prefix, parfile):
             cell_assignments, C_std, V, V_std, REF, ALT, meta, readme = pars
     except FileNotFoundError:
         print("No run for k 3")
-
-    return cell_assignments, C_std, V, V_std, REF, ALT, meta, readme
+    to_return = {"cell_assignments": cell_assignments, "C_std": C_std, "V": V, "V_std": V_std, "REF": REF, "ALT": ALT,
+                 "meta": meta, "readme": readme}
+    return to_return

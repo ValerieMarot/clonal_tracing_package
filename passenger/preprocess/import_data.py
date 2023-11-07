@@ -108,13 +108,15 @@ def get_variant_measurement_data(path,
         if sub_cell_names is not None:
             REF = REF[sub_cell_names]
             ALT = ALT[sub_cell_names]
+    # filter vars in repeat regions
+    sub = meta.ref != "N"
     if filter_hela:
         int_pos = np.array([int(i) for i in meta.pos.tolist()])
         in_region = (meta.chr == "chr6") & (int_pos > 28510120) & (int_pos < 33480577)
         print(np.sum(in_region), " vars in HLA regions")
-        sub = ~in_region
-        REF, ALT = REF.loc[sub], ALT.loc[sub]
-        meta = meta.loc[sub]
+        sub &= ~in_region
+    REF, ALT = REF.loc[sub], ALT.loc[sub]
+    meta = meta.loc[sub]
     return REF, ALT, meta
 
 

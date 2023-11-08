@@ -1,7 +1,10 @@
 import pandas as pd
 import numpy as np
 from passenger.preprocess.filter import get_pars_from_line, filter_vars
+import os
 
+def is_non_zero_file(fpath):
+    return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
 
 def get_raw_data(raw_prefix, filter_germline=None, filter_ref_alt_cells=None):
     ALT = pd.read_csv(raw_prefix + "ALT.csv", index_col=0)
@@ -31,18 +34,19 @@ def get_best_run(run_prefix, raw_prefix, parfile, k=2):
     for i in np.arange(1, 7):
         filter_germline, filter_ref_alt_cells = get_pars_from_line(parfile, i)
         file_prefix = run_prefix + "_" + str(filter_germline) + "_" + str(filter_ref_alt_cells)
-        C_, C_std_, V_, V_std_, meta_ = get_run_data(file_prefix)
+        if is_non_zero_file(file_prefix + "_C.csv"):
+            C_, C_std_, V_, V_std_, meta_ = get_run_data(file_prefix)
 
-        if V_.shape[0] > 100:
-            new_score = np.nanmean(np.abs(C_[0] - C_[1]))
-            if k == 3:
-                alldists = np.array((C_[0] - C_[1], C_[2] - C_[1], C_[0] - C_[2]))
-                new_score = np.nanmean(np.abs(alldists))
-            print(i, "\t", np.round(new_score, 2))
-            if best_score < new_score:
-                C, C_std, V, V_std, meta = C_, C_std_, V_, V_std_, meta_
-                best_score = new_score
-                best_line = i
+            if V_.shape[0] > 100:
+                new_score = np.nanmean(np.abs(C_[0] - C_[1]))
+                if k == 3:
+                    alldists = np.array((C_[0] - C_[1], C_[2] - C_[1], C_[0] - C_[2]))
+                    new_score = np.nanmean(np.abs(alldists))
+                print(i, "\t", np.round(new_score, 2))
+                if best_score < new_score:
+                    C, C_std, V, V_std, meta = C_, C_std_, V_, V_std_, meta_
+                    best_score = new_score
+                    best_line = i
 
     readme = (best_line, best_score)
 

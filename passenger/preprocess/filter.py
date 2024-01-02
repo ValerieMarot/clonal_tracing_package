@@ -2,32 +2,35 @@ import numpy as np
 from scipy.stats import pearsonr
 
 
-def filter_vars(REF, ALT, meta,
+def filter_vars(adata,
                 filter_germline=True,
                 filter_RNA_edits=True,
-                filter_ref_alt_cells=5):
-    f_r_a_c = (filter_ref_alt_cells / 100) * ALT.shape[1]
+                min_MAF=5):
+    f_r_a_c = (min_MAF / 100) * adata.X.shape[0]
     # only keep variants seen and NOT seen in at least min_ref_alt_cells cells
     # i.e. kick out variants seen in almost all or almost no cells
-    only_REF = np.sum((REF >= 2) & (ALT <= 2), axis=1)
-    only_ALT = np.sum((REF <= 2) & (ALT >= 2), axis=1)
-    REF_and_ALT = np.sum((REF >= 2) & (ALT >= 2), axis=1)
-    sub = (only_ALT >= f_r_a_c) & (only_REF >= f_r_a_c)
-    sub |= (only_ALT >= f_r_a_c) & (REF_and_ALT >= f_r_a_c)
-    sub |= (only_REF >= f_r_a_c) & (REF_and_ALT >= f_r_a_c)
+    cov = adata.X
+    REF, ALT = adata.layers["REF"], adata.layers["ALT"]
+    only_REF = np.sum((REF >= 2) & (ALT <= 2), axis=0)
+    only_ALT = np.sum((REF <= 2) & (ALT >= 2), axis=0)
+    any_REF = np.sum((REF >= 2) & (REF/cov>.3), axis=0)
+    any_ALT = np.sum((ALT >= 2) & (ALT/cov>.3), axis=0)
+    sub = (only_ALT >= f_r_a_c) & (any_REF >= f_r_a_c)
+    sub |= (only_REF >= f_r_a_c) & (any_ALT >= f_r_a_c)
     # only keep variants covered in at least min_cov_cells  cells
     if filter_germline:  # filter germline variants
-        sub &= ~meta.dbSNP
+        sub &= ~adata.var.dbSNP
     if filter_RNA_edits:  # filter RNA edits
-        sub &= ~meta.REDIdb
+        sub &= ~adata.var.REDIdb
     # subset
-    sub |= meta.chr == "chrM"
+    sub |= adata.var.chr == "chrM"
 
-    print("Filtering \t" + str(np.sum(~sub)) + " variants.")
-    print("Keeping \t" + str(np.sum(sub)) + " variants.")
-    REF, ALT = REF.loc[sub], ALT.loc[sub]
-    meta = meta.loc[sub]
-    return REF, ALT, meta
+    adata = adata[:,sub]
+    
+    adata.uns["filter_germline"]=filter_germline
+    adata.uns["min_MAF"] = min_MAF
+    
+    return adata
 
 
 def filter_vars_from_same_read(REF, ALT, meta, dist=np.infty, pearson_corr=.95, merge_WE=False):

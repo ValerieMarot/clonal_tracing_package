@@ -6,8 +6,18 @@ from itertools import permutations
 
 
 def get_wNMF_matrices(adata, M_high_conf=False, mode="VAF_reduced"):
-    get_varcall(adata, mode=mode)
-    get_weights(adata, M_high_conf=M_high_conf, mode=mode)
+    adata = get_varcall(adata, mode=mode)
+    adata = get_weights(adata, M_high_conf=M_high_conf, mode=mode)
+    return adata
+
+def orth_score(C):
+    k = C.shape[1]
+    sc = []
+    for i in range(k):
+        for j in range(k-i-1):
+            j = i+1
+            sc.append(np.dot(C[:,i], C[:,j])/(np.linalg.norm(C[:,i])*np.linalg.norm(C[:,j])))
+    return -np.mean(sc)
 
 
 def get_weights(adata, M_high_conf=False, mode=""):
@@ -26,6 +36,7 @@ def get_weights(adata, M_high_conf=False, mode=""):
         weights[np.where(adata.X >= 2)] = 0.5
         weights[adata.layers["M"] == 0.5] = 1
     adata.layers["weights"]=weights
+    return adata
 
 
 def get_varcall(adata, mode="VAF_reduced"):
@@ -38,6 +49,7 @@ def get_varcall(adata, mode="VAF_reduced"):
         M[whr] = ((adata.layers["ALT"][whr] >= 2) * (adata.layers["REF"][whr] >= 2) * 0.5) + \
                  ((adata.layers["ALT"][whr] >= 2) * (adata.layers["REF"][whr] <= 1) * 1)
     adata.layers["M"]=M
+    return adata
 
 
 def NMF_weighted(adata, k=2, max_cycles=1000,
@@ -45,7 +57,7 @@ def NMF_weighted(adata, k=2, max_cycles=1000,
     """
     Function to calculate weighted NMF given variant call matrix X and weight matrix (of equal shape as X).
     We try to learn C (cells*k) and V (k*variants) that minimise the cost function:
-        ((X-CV)**2)oW     with o the hadamart product
+        ((X-CV)**2)°W     with ° the hadamart product
     There is no closed solution of this equation, instead we alternatively minimize C and V.
     In this equation the rows of C and columns of V are independent. Because of this, we can mimize them in parallel
     for speedup.
@@ -89,7 +101,7 @@ def NMF_weighted(adata, k=2, max_cycles=1000,
     start = time.time()
 
     for i in range(max_cycles):
-        if i % 100 == 0:
+        if i % 10 == 0:
             print(i)
             end = time.time()
             hours, rem = divmod(end-start, 3600)
@@ -165,13 +177,13 @@ def weighted_errors(M, C, V, W):
 
 def diff_score(C):
     from itertools import combinations
-    test_list = np.arange(C.shape[0])
+    test_list = np.arange(C.shape[1])
     res = list(combinations(test_list, 2))
     diff = []
     for i in res:
-        diff.append(np.abs(np.diff(C[[i]][0], axis=0))[0])
+        diff.append(np.abs(C[:,i[0]]- C[:,i[1]]))
     diff = np.array(diff)
-    return np.mean(np.mean(diff, axis=0))
+    return np.mean(np.nanmean(diff, axis=0))
 
 
 def bootstrap_wNMF(adata, k=2, n_bootstrap=10, bootstrap_percent=.9,
@@ -210,7 +222,7 @@ def bootstrap_wNMF(adata, k=2, n_bootstrap=10, bootstrap_percent=.9,
     n_vars = adata.shape[1]
     C_all, V_all = [], []
     if np.any([i not in list(adata.uns.keys()) for i in ["M", "weights"]]):
-        get_wNMF_matrices(adata, mode=mode)
+        adata = get_wNMF_matrices(adata, mode=mode)
 
     ######################
     # run bootstrap wNMF #
@@ -249,14 +261,21 @@ def bootstrap_wNMF(adata, k=2, n_bootstrap=10, bootstrap_percent=.9,
     ######################
     #     get output     #
     ######################
-    C, C_std = np.mean(np.array(C_all), axis=0), np.nanstd(C_all, axis=0)
-    V, V_std = np.nanmean(V_all, axis=0), np.nanstd(V_all, axis=0)
+    if n_bootstrap>1:
+        C, C_std = np.mean(np.array(C_all), axis=0), np.nanstd(C_all, axis=0)
+        V, V_std = np.nanmean(V_all, axis=0), np.nanstd(V_all, axis=0)
+        adata.varm["V"], adata.varm["V_std"] = V.T, V_std.T
+        adata.obsm["C"], adata.obsm["C_std"] = C, C_std
+    
+    else:
+        C, C_std = C_all[0], None
+        V, V_std = V_all[0], None
+        adata.varm["V"], adata.obsm["C"] = V.T, C
     print(C.shape)    
     
-    adata.varm["V"], adata.varm["V_std"] = V.T, V_std.T
-    adata.obsm["C"], adata.obsm["C_std"] = C, C_std
     
     adata.uns["weighted_E"] = weighted_errors(adata.layers["M"], C, V, adata.layers["weights"])
     adata.uns["k"]:k
     adata.uns["C_dist"]=diff_score(C) if k>1 else np.nan
+    adata.uns["all_C"]=C_all
     return adata

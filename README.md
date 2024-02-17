@@ -1,6 +1,6 @@
 # CCLONE package
 
-This package provides functions for analyis of single-cell variant call  data. We introduce CCRAB based on a weighted NMF, along with revised processing and visualisation functions.
+This package provides functions for analyis of single-cell variant call  data. We introduce CCLONE based on a weighted NMF, along with revised processing and visualisation functions.
 The tools in this package are compatible with [scanpy](https://scanpy.readthedocs.io/).
 
 ### Instalation
@@ -13,7 +13,7 @@ To install the package from GitHub, please use:
      
 ### How to run
 
-Tutorials explaining the analysis workflow with CCRAB can be found [here](https://github.com/ValerieMarot/clonal_tracing_notebooks).
+Tutorials explaining the analysis workflow with CCLONE can be found [here](https://github.com/ValerieMarot/clonal_tracing_notebooks).
 
 ### References
 

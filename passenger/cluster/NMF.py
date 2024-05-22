@@ -5,50 +5,48 @@ from joblib import Parallel, delayed
 from itertools import permutations
 
 
-def get_wNMF_matrices(adata, M_high_conf=False, mode="VAF_reduced"):
-    adata = get_varcall(adata, mode=mode)
-    adata = get_weights(adata, M_high_conf=M_high_conf, mode=mode)
+def get_wNMF_matrices(adata, mode=""):
+    adata = get_varcall(adata)
+    adata = get_weights(adata, mode=mode)
     return adata
+
 
 def orth_score(C):
     k = C.shape[1]
     sc = []
     for i in range(k):
-        for j in range(k-i-1):
-            j = i+1
-            sc.append(np.dot(C[:,i], C[:,j])/(np.linalg.norm(C[:,i])*np.linalg.norm(C[:,j])))
+        for j in range(k - i - 1):
+            j = i + 1
+            sc.append(np.dot(C[:, i], C[:, j]) / (np.linalg.norm(C[:, i]) * np.linalg.norm(C[:, j])))
     return -np.mean(sc)
 
 
-def get_weights(adata, M_high_conf=False, mode=""):
+def get_weights(adata, mode=""):
     # set weight matrix
     weights = np.zeros(adata.X.shape)
-    if mode == "VAF":
+    if mode == "10X":
         # Set S to probability of missing ALT when randomly sampling cov times
-        # note: this is probably not adapted to genetic variants
-        b = 0  # prob of monoallelic expression
+        # note: this is not adapted to SmartSeq2 data
         for i in np.unique(adata.X):
-            p = 1 - (b + (1 - b) * binom.pmf(k=0, n=i, p=.5))
+            p = 1 - binom.pmf(k=0, n=i, p=.5)  # prob of sampling i times the reference allele
             weights[np.where(adata.X == i)] = p
-        if M_high_conf:  # observing a variant set to higher confidence
-            weights[adata.layers["M"] > 0] = 1
+        weights[adata.layers["M"] > 0] = 1  # if we see the variant, the prob of missing it is 0
+        weights[np.where(adata.X < 2)] = 0  # only count from 2+ reads
     else:
         weights[np.where(adata.X >= 2)] = 0.5
         weights[adata.layers["M"] == 0.5] = 1
-    adata.layers["weights"]=weights
+    adata.layers["weights"] = weights
     return adata
 
 
-def get_varcall(adata, mode="VAF_reduced"):
+def get_varcall(adata):
     # set X matrix
     M = np.zeros(adata.X.shape)
     whr = np.where(adata.X >= 2)
-    if mode == "VAF":  # M contains exact VAF
-        M[whr] = (adata.layers["ALT"][whr] / adata.X[whr])
-    else:  # M contains VAF=.5 if we see ref and alt, VAF=1 if we see only ALT, VAF=0 else
-        M[whr] = ((adata.layers["ALT"][whr] >= 2) * (adata.layers["REF"][whr] >= 2) * 0.5) + \
-                 ((adata.layers["ALT"][whr] >= 2) * (adata.layers["REF"][whr] <= 1) * 1)
-    adata.layers["M"]=M
+    # M contains VAF=.5 if we see ref and alt, VAF=1 if we see only ALT, VAF=0 else
+    M[whr] = ((adata.layers["ALT"][whr] >= 2) * (adata.layers["REF"][whr] >= 2) * 0.5) + \
+             ((adata.layers["ALT"][whr] >= 2) * (adata.layers["REF"][whr] <= 1) * 1)
+    adata.layers["M"] = M
     return adata
 
 
@@ -86,17 +84,16 @@ def NMF_weighted(adata, k=2, max_cycles=1000,
     """
     M, weights = adata.layers["M"], adata.layers["weights"]
     # init
-    bounds = np.repeat([[0, 1]], k, 0)  # bounds of C and V matrices 
+    bounds = np.repeat([[0, 1]], k, 0)  # bounds of C and V matrices
     v_entries, c_entries = M.shape[1], M.shape[0]
     # initialize C and V with random values btw 0 and 1:
     V = np.random.rand(k, v_entries)
     C = np.random.rand(c_entries, k)
-    cost = []  # to check wether we can break iteration for speedup:
     if parallel:
-        # we send blocks of size 100 to each core. Note that too small blocks will impede runtime because of send & fetch delays.
+        # we send blocks of size 100 to each core.
+        # Note that too small blocks will impede runtime because of send & fetch delays.
         n_parts_V = np.ceil(v_entries / 100)
         n_parts_C = np.ceil(c_entries / 100)
-        #print(n_parts_C, n_parts_V)
     import time
     start = time.time()
 
@@ -104,9 +101,9 @@ def NMF_weighted(adata, k=2, max_cycles=1000,
         if i % 10 == 0:
             print(i)
             end = time.time()
-            hours, rem = divmod(end-start, 3600)
+            hours, rem = divmod(end - start, 3600)
             minutes, seconds = divmod(rem, 60)
-            print("{:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
+            print("{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds))
             start = time.time()
 
         #########
@@ -119,27 +116,20 @@ def NMF_weighted(adata, k=2, max_cycles=1000,
             V = parallel_run(V, v_entries, n_parts_V, fun_v, bounds, n_jobs=n_jobs, axis=1).T
         else:
             for j in np.arange(0, M.shape[1]).tolist():
-                V[:,j] = op.minimize(fun_v, V[:,j], bounds=bounds, args=j).x
+                V[:, j] = op.minimize(fun_v, V[:, j], bounds=bounds, args=j).x
 
         #########
         # fit C #
         #########
         def fun_c(c, h):  # helper function for minimize call
             return np.sum(((np.dot(c, V) - M[h]) ** 2) * weights[h])
+
         if parallel:
             C = parallel_run(C, c_entries, n_parts_C, fun_c, bounds, n_jobs=n_jobs, axis=0)
         else:
             for j in np.arange(0, M.shape[0]).tolist():
                 C[j] = op.minimize(fun_c, C[j], bounds=bounds, args=j).x
 
-        ###############
-        # break check #
-        ###############
-        #cost.append(np.sum(((np.clip((np.dot(C, V)), 0, 1) - M) ** 2) * weights))
-        #if (i % 10 == 0) & (i > 0):  # can break run if the cost function is not getting better anymore
-        #    if (np.mean(cost[i - 10:i - 5]) - np.mean(cost[i - 4:i])) < 0:
-        #        print("breaking at iteration " + str(i))
-        #        #break
     return C, V
 
 
@@ -151,14 +141,14 @@ def parallel_run(in_arr, n_entries, n_parts, fun, bounds, n_jobs, axis=0):
     pars = []
     for j in range(n_entries):
         pars.append((in_arr[j] if axis == 0 else in_arr[:, j], j))
-    # print(pars)
-    
+
     # run fitting
     def fit_helper(pars_):
         out = []
         for p in pars_:
             out.append(op.minimize(fun, p[0], bounds=bounds, args=p[1]).x)
         return out
+
     n_ = int(np.ceil(n_entries / n_parts))
     result = Parallel(n_jobs=n_jobs, backend="loky")(
         delayed(fit_helper)(pars[i:i + n_]) for i in range(0, n_entries, n_))
@@ -175,19 +165,20 @@ def weighted_errors(M, C, V, W):
     E = np.nansum(((M_recov - M) ** 2) * W)
     return E
 
+
 def diff_score(C):
     from itertools import combinations
     test_list = np.arange(C.shape[1])
     res = list(combinations(test_list, 2))
     diff = []
     for i in res:
-        diff.append(np.abs(C[:,i[0]]- C[:,i[1]]))
+        diff.append(np.abs(C[:, i[0]] - C[:, i[1]]))
     diff = np.array(diff)
     return np.mean(np.nanmean(diff, axis=0))
 
 
 def bootstrap_wNMF(adata, k=2, n_bootstrap=10, bootstrap_percent=.9,
-                   max_cycles=1000, parallel=True, n_jobs=-1, mode="VAF_discrete"):
+                   max_cycles=1000, parallel=True, n_jobs=-1, mode=""):
     """
     Bootstrap function for the wNMF. We are not guaranteed to find a global minimum for the wNMF and the output
     will change over multiple iteration. To get an estimation of the robustnes we run the wNMF multiple times using
@@ -213,8 +204,8 @@ def bootstrap_wNMF(adata, k=2, n_bootstrap=10, bootstrap_percent=.9,
         Whether to fit rows of C and columns of V in parallel for runtime speed-up.
     n_cores: `int` (default: None)
         How many cores to run on in parallel. Per default we set it to the number of available CPUs.
-    mode: `str` in ['VAF_discrete', 'VAF'] (default: 'VAF_discrete')
-        Whether to use the exact VAF as observation or the discretised ones assuming diploid model (0 - 0.5 - 1).
+    mode: `str` in ['', '10X'] (default: '')
+        Whether to use the SmartSeq2 model or the 10X one (0 - 0.5 - 1).
    Returns
     -------
 
@@ -230,11 +221,11 @@ def bootstrap_wNMF(adata, k=2, n_bootstrap=10, bootstrap_percent=.9,
     for i in range(n_bootstrap):
         # subset to bootstrap_percent% of variants
         idx = np.random.choice(np.arange(n_vars), int(n_vars * bootstrap_percent), replace=False)
-        adata_sub = adata[:,idx]
+        adata_sub = adata[:, idx]
         # run wNMF
         C, V = NMF_weighted(adata_sub, k=k, max_cycles=max_cycles, parallel=parallel, n_jobs=n_jobs)
         V_ = np.zeros(shape=(k, n_vars)) * np.nan  # weights of excluded variants set to nan
-        V_[:,idx] = V
+        V_[:, idx] = V
         C_all.append(C), V_all.append(V_)
     C_all, V_all = np.array(C_all), np.array(V_all)
 
@@ -261,21 +252,20 @@ def bootstrap_wNMF(adata, k=2, n_bootstrap=10, bootstrap_percent=.9,
     ######################
     #     get output     #
     ######################
-    if n_bootstrap>1:
+    if n_bootstrap > 1:
         C, C_std = np.mean(np.array(C_all), axis=0), np.nanstd(C_all, axis=0)
         V, V_std = np.nanmean(V_all, axis=0), np.nanstd(V_all, axis=0)
         adata.varm["V"], adata.varm["V_std"] = V.T, V_std.T
         adata.obsm["C"], adata.obsm["C_std"] = C, C_std
-    
+
     else:
         C, C_std = C_all[0], None
         V, V_std = V_all[0], None
         adata.varm["V"], adata.obsm["C"] = V.T, C
-    print(C.shape)    
-    
-    
+    print(C.shape)
+
     adata.uns["weighted_E"] = weighted_errors(adata.layers["M"], C, V, adata.layers["weights"])
-    adata.uns["k"]:k
-    adata.uns["C_dist"]=diff_score(C) if k>1 else np.nan
-    adata.uns["all_C"]=C_all
+    adata.uns["k"]: k
+    adata.uns["C_dist"] = diff_score(C) if k > 1 else np.nan
+    adata.uns["all_C"] = C_all
     return adata

@@ -30,7 +30,7 @@ def get_weights(adata, mode=""):
         for i in np.unique(adata.X):
             p = 1 - binom.pmf(k=0, n=i, p=.5)  # prob of sampling i times the reference allele
             weights[np.where(adata.X == i)] = p
-        weights[adata.layers["M"] > 0] = 1  # if we see the variant, the prob of missing it is 0
+        weights[adata.layers["M"] == 0.5] = 1  # if we see both allels, the prob of having missed any is 0
         weights[np.where(adata.X < 2)] = 0  # only count from 2+ reads
     else:
         weights[np.where(adata.X >= 2)] = 0.5

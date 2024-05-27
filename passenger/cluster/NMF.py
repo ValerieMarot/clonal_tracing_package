@@ -32,6 +32,8 @@ def get_weights(adata, mode=""):
             weights[np.where(adata.X == i)] = p
         weights[adata.layers["M"] == 0.5] = 1  # if we see both allels, the prob of having missed any is 0
         weights[np.where(adata.X < 2)] = 0  # only count from 2+ reads
+    elif mode == "no_weight":
+        weights = np.ones(adata.X.shape)
     else:
         weights[np.where(adata.X >= 2)] = 0.5
         weights[adata.layers["M"] == 0.5] = 1

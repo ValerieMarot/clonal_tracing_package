@@ -34,8 +34,11 @@ def get_weights(adata, mode=""):
         weights[np.where(adata.X < 2)] = 0  # only count from 2+ reads
     elif mode == "no_weight":
         weights = np.ones(adata.X.shape)
+    elif mode == "binary":
+        weights = np.ones(adata.X.shape)
+        weights[np.where(adata.X < 2)] = 0
     else:
-        weights[np.where(adata.X >= 2)] = 0.5
+        weights[np.where(adata.X >= 1)] = 0.5
         weights[adata.layers["M"] == 0.5] = 1
     adata.layers["weights"] = weights
     return adata
@@ -46,8 +49,8 @@ def get_varcall(adata):
     M = np.zeros(adata.X.shape)
     whr = np.where(adata.X >= 2)
     # M contains VAF=.5 if we see ref and alt, VAF=1 if we see only ALT, VAF=0 else
-    M[whr] = ((adata.layers["ALT"][whr] >= 2) * (adata.layers["REF"][whr] >= 2) * 0.5) + \
-             ((adata.layers["ALT"][whr] >= 2) * (adata.layers["REF"][whr] <= 1) * 1)
+    M[whr] = ((adata.layers["ALT"][whr] >= 1) * (adata.layers["REF"][whr] >= 1) * 0.5) + \
+             ((adata.layers["ALT"][whr] >= 1) * (adata.layers["REF"][whr] == 0) * 1)
     adata.layers["M"] = M
     return adata
 

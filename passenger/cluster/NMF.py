@@ -38,7 +38,7 @@ def get_weights(adata, mode=""):
         weights = np.ones(adata.X.shape)
         weights[np.where(adata.X < 2)] = 0
     else:
-        weights[np.where(adata.X >= 1)] = 0.5
+        weights[np.where(adata.X >= 2)] = 0.5
         weights[adata.layers["M"] == 0.5] = 1
     adata.layers["weights"] = weights
     return adata

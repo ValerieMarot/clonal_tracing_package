@@ -9,7 +9,7 @@ def is_non_zero_file(fpath):
     return os.path.isfile(fpath) and os.path.getsize(fpath) > 0
 
 
-def get_meta(meta_file, annotation_file, chrom, path_to_exome_data):
+def get_meta(meta_file, annotation_file, chrom):
 
     meta_0 = pd.read_csv(meta_file, index_col=False, header=None,
                          sep="\t", comment="#")
@@ -33,26 +33,13 @@ def get_meta(meta_file, annotation_file, chrom, path_to_exome_data):
 
     meta_0["REDIdb"], meta_0["dbSNP"], meta_0["gene"] = REDIdb, dbSNP, gene
 
-    if path_to_exome_data is not None:
-        cancer_file = path_to_exome_data + "cancer-filtered-var-pileup.vcf"
-        healthy_file = path_to_exome_data + "healthy-filtered-var-pileup.vcf"
-        if is_non_zero_file(cancer_file) and is_non_zero_file(healthy_file):
-            cancer_ref, cancer_alt, cancer_cov = get_WE_data(cancer_file, meta_0)
-            healthy_ref, healthy_alt, healthy_cov = get_WE_data(healthy_file, meta_0)
-        meta_0["cancer_ref"] = cancer_ref
-        meta_0["cancer_alt"] = cancer_alt
-        meta_0["cancer_cov"] = cancer_cov
-        meta_0["healthy_ref"] = healthy_ref
-        meta_0["healthy_alt"] = healthy_alt
-        meta_0["healthy_cov"] = healthy_cov
     return meta_0
 
 
 def get_variant_measurement_data(path,
                                  all_chroms=None,
                                  cell_names=None,
-                                 path_to_exome_data=None,
-                                 sub_cell_names=None, perc=10,
+                                 perc=10,
                                  filter_hela=True):
     meta, ann, ALT, REF = None, None, None, None
     all_chroms = ["chr" + str(i) for i in range(1, 23)] if all_chroms is None else all_chroms
@@ -68,16 +55,13 @@ def get_variant_measurement_data(path,
 
         REF_0 = DP - ALT_0
 
-        meta_0 = get_meta(path + '/' + chrom + '/cellSNP.base.vcf', 
+        meta_0 = get_meta(path + '/' + chrom + '/cellSNP.base.vcf',
                           path + '/' + chrom + '/annotations.tsv',
-                          chrom,
-                          path_to_exome_data=path_to_exome_data + '/' + chrom + "/" if path_to_exome_data is not None else None)
+                          chrom)
 
         # variants need to be covered in at least 10% of the cells
         sub = np.sum((ALT_0 + REF_0) >= 2, axis=1) > (ALT_0.shape[1] / perc)
         ALT_0, REF_0, meta_0 = ALT_0[sub], REF_0[sub], meta_0[sub]
-
-        print(meta_0.shape)
 
         ALT = ALT_0 if ALT is None else pd.concat((ALT, ALT_0))
         REF = REF_0 if REF is None else pd.concat((REF, REF_0))
@@ -90,43 +74,13 @@ def get_variant_measurement_data(path,
 
     if cell_names is not None:
         REF.columns, ALT.columns = cell_names, cell_names
-        if sub_cell_names is not None:
-            REF = REF[sub_cell_names]
-            ALT = ALT[sub_cell_names]
+
     # filter vars in repeat regions
     sub = meta.ref != "N"
     if filter_hela:
         int_pos = np.array([int(i) for i in meta.pos.tolist()])
         in_region = (meta.chr == "chr6") & (int_pos > 28510120) & (int_pos < 33480577)
-        print(np.sum(in_region), " vars in HLA regions")
         sub &= ~in_region
     REF, ALT = REF.loc[sub], ALT.loc[sub]
     meta = meta.loc[sub]
     return REF, ALT, meta
-
-
-def get_WE_data(path_to_file, meta_):
-    WE_cancer = pd.read_csv(path_to_file,
-                            comment="#", sep="\t", index_col=False, header=None)
-    ref, alt, cov = [], [], []
-
-    for i in range(meta_.shape[0]):
-        meta_pos = WE_cancer[1] == meta_.iloc[i].pos
-        if not np.any(meta_pos):
-            ref.append(0), alt.append(0), cov.append(0)
-            continue
-        else:
-            WE_c_entry = WE_cancer.loc[meta_pos].iloc[0]
-            vals = WE_c_entry[9].split(":")[-1].split(",")
-            alleles = WE_c_entry[4].split(",")
-            ref.append(int(vals[0]))
-            cov.append(np.sum(np.array(vals).astype(int)))
-            vals = vals[1:]
-            found = False
-            for j, a in enumerate(alleles):
-                if a == meta_.iloc[i].mut:
-                    alt.append(int(vals[j]))
-                    found = True
-            if not found:
-                alt.append(0)
-    return ref, alt, cov

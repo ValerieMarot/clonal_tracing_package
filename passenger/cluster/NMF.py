@@ -11,16 +11,6 @@ def get_wNMF_matrices(adata, mode=""):
     return adata
 
 
-def orth_score(C):
-    k = C.shape[1]
-    sc = []
-    for i in range(k):
-        for j in range(k - i - 1):
-            j = i + 1
-            sc.append(np.dot(C[:, i], C[:, j]) / (np.linalg.norm(C[:, i]) * np.linalg.norm(C[:, j])))
-    return -np.mean(sc)
-
-
 def get_weights(adata, mode=""):
     # set weight matrix
     weights = np.zeros(adata.X.shape)

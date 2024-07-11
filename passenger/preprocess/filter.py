@@ -13,8 +13,8 @@ def filter_vars(adata,
     REF, ALT = adata.layers["REF"], adata.layers["ALT"]
     only_REF = np.sum((REF >= 2) & (ALT <= 2), axis=0)
     only_ALT = np.sum((REF <= 2) & (ALT >= 2), axis=0)
-    any_REF = np.sum((REF >= 2) & (REF/cov>.3), axis=0)
-    any_ALT = np.sum((ALT >= 2) & (ALT/cov>.3), axis=0)
+    any_REF = np.sum((REF >= 2) & (REF / cov > .3), axis=0)
+    any_ALT = np.sum((ALT >= 2) & (ALT / cov > .3), axis=0)
     sub = (only_ALT >= f_r_a_c) & (any_REF >= f_r_a_c)
     sub |= (only_REF >= f_r_a_c) & (any_ALT >= f_r_a_c)
     # only keep variants covered in at least min_cov_cells  cells
@@ -25,15 +25,15 @@ def filter_vars(adata,
     # subset
     sub |= adata.var.chr == "chrM"
 
-    adata = adata[:,sub]
-    
-    adata.uns["filter_germline"]=filter_germline
+    adata = adata[:, sub]
+
+    adata.uns["filter_germline"] = filter_germline
     adata.uns["min_MAF"] = min_MAF
-    
+
     return adata
 
 
-def filter_vars_from_same_read(REF, ALT, meta, dist=np.infty, pearson_corr=.95, merge_WE=False):
+def filter_vars_from_same_read(REF, ALT, meta, dist=np.infty, pearson_corr=.95):
     VAF = REF / (REF + ALT)
 
     p = np.array(meta.pos)
@@ -51,14 +51,14 @@ def filter_vars_from_same_read(REF, ALT, meta, dist=np.infty, pearson_corr=.95, 
         if np.sum(sub) > 20:
             val = pearsonr(x[sub], y[sub])[0]
             if val > pearson_corr:
-                REF, ALT, meta = merge_row(i, i_, REF, ALT, meta, merge_WE=merge_WE)
+                REF, ALT, meta = merge_row(i, i_, REF, ALT, meta)
                 c += 1
 
     print("filtered " + str(c))
     return REF, ALT, meta
 
 
-def merge_row(i, i_, REF, ALT, meta, merge_WE):
+def merge_row(i, i_, REF, ALT, meta):
     row = meta.loc[i_]
     rows = meta.loc[[i, i_]]
     # merge meta
@@ -67,13 +67,9 @@ def merge_row(i, i_, REF, ALT, meta, merge_WE):
 
     row.ref = "_".join(np.array(rows.ref))
     row.mut = "_".join(np.array(rows.mut))
-    if merge_WE:
-        row.cancer_ref, row.cancer_alt = np.sum(rows.cancer_ref), np.sum(rows.cancer_alt)
-        row.healthy_ref, row.healthy_alt = np.sum(rows.healthy_ref), np.sum(rows.healthy_alt)
+
     REF.loc[i_] = np.sum(REF.loc[[i_, i]], axis=0)
     ALT.loc[i_] = np.sum(ALT.loc[[i_, i]], axis=0)
-
-    # todo merge gene entry
 
     meta.loc[i_] = row
     meta, REF, ALT = meta.drop(i, axis=0), REF.drop(i, axis=0), ALT.drop(i, axis=0)

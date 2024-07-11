@@ -11,8 +11,8 @@ def filter_vars(adata,
     # i.e. kick out variants seen in almost all or almost no cells
     cov = adata.X
     REF, ALT = adata.layers["REF"], adata.layers["ALT"]
-    only_REF = np.sum((REF >= 2) & (ALT <= 2), axis=0)
-    only_ALT = np.sum((REF <= 2) & (ALT >= 2), axis=0)
+    only_REF = np.sum((REF >= 2) & (ALT == 0), axis=0)
+    only_ALT = np.sum((REF == 0) & (ALT >= 2), axis=0)
     any_REF = np.sum((REF >= 2) & (REF/cov>.3), axis=0)
     any_ALT = np.sum((ALT >= 2) & (ALT/cov>.3), axis=0)
     sub = (only_ALT >= f_r_a_c) & (any_REF >= f_r_a_c)

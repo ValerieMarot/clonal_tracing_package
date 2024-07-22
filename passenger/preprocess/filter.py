@@ -2,33 +2,46 @@ import numpy as np
 from scipy.stats import pearsonr
 
 
-def filter_vars(adata,
-                filter_germline=True,
-                filter_RNA_edits=True,
-                min_MAF=5):
-    f_r_a_c = (min_MAF / 100) * adata.X.shape[0]
-    # only keep variants seen and NOT seen in at least min_ref_alt_cells cells
-    # i.e. kick out variants seen in almost all or almost no cells
-    cov = adata.X
-    REF, ALT = adata.layers["REF"], adata.layers["ALT"]
+def min_MAF_filter(f_r_a_c, REF, ALT):
+    cov = REF + ALT
     only_REF = np.sum((REF >= 2) & (ALT <= 2), axis=0)
     only_ALT = np.sum((REF <= 2) & (ALT >= 2), axis=0)
     any_REF = np.sum((REF >= 2) & (REF / cov > .3), axis=0)
     any_ALT = np.sum((ALT >= 2) & (ALT / cov > .3), axis=0)
     sub = (only_ALT >= f_r_a_c) & (any_REF >= f_r_a_c)
     sub |= (only_REF >= f_r_a_c) & (any_ALT >= f_r_a_c)
-    # only keep variants covered in at least min_cov_cells  cells
+    return sub
+
+
+def filter_vars(adata,
+                filter_germline=True,
+                min_MAF=5,
+                min_cell_cov=10):
+    f_r_a_c = (min_MAF / 100) * adata.X.shape[0]
+    # only keep variants seen and NOT seen in at least min_ref_alt_cells cells
+    # i.e. kick out variants seen in almost all or almost no cells
+    REF, ALT = adata.layers["REF"], adata.layers["ALT"]
+    sub = min_MAF_filter(f_r_a_c, REF, ALT)
+    # filter based on annotation
     if filter_germline:  # filter germline variants
         sub &= ~adata.var.dbSNP
-    if filter_RNA_edits:  # filter RNA edits
-        sub &= ~adata.var.REDIdb
-    # subset
-    sub |= adata.var.chr == "chrM"
+    sub &= ~adata.var.REDIdb
 
     adata = adata[:, sub]
 
+    # filter cell coverage
+    cell_coverage = np.sum(adata.X >= 2, axis=1) / adata.shape[1]
+    adata = adata[cell_coverage > min_cell_cov/100]
+
+    # refilter min MAF in case excluded cells from coverage contributed a lot
+    REF, ALT = adata.layers["REF"], adata.layers["ALT"]
+    sub = min_MAF_filter(f_r_a_c, REF, ALT)
+    adata = adata[:, sub]
+
+    # save parameters
     adata.uns["filter_germline"] = filter_germline
     adata.uns["min_MAF"] = min_MAF
+    adata.uns["min_cell_cov"] = min_cell_cov
 
     return adata
 
@@ -55,6 +68,7 @@ def filter_vars_from_same_read(REF, ALT, meta, dist=np.infty, pearson_corr=.95):
                 c += 1
 
     print("filtered " + str(c))
+    meta.pos = meta.pos.astype(str)
     return REF, ALT, meta
 
 

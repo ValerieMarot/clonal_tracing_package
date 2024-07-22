@@ -172,8 +172,8 @@ def diff_score(C):
     return np.mean(np.nanmean(diff, axis=0))
 
 
-def bootstrap_wNMF(adata, k=2, n_bootstrap=10, bootstrap_percent=.9,
-                   max_cycles=1000, parallel=True, n_jobs=-1, mode=""):
+def bootstrap_wNMF(adata, k, n_bootstrap=50, bootstrap_percent=.9,
+                   max_cycles=100, parallel=True, n_jobs=-1, mode=""):
     """
     Bootstrap function for the wNMF. We are not guaranteed to find a global minimum for the wNMF and the output
     will change over multiple iteration. To get an estimation of the robustnes we run the wNMF multiple times using
@@ -197,7 +197,7 @@ def bootstrap_wNMF(adata, k=2, n_bootstrap=10, bootstrap_percent=.9,
         Number of cycles to fit C and V before break.
     parallel: `bool` (default: True)
         Whether to fit rows of C and columns of V in parallel for runtime speed-up.
-    n_cores: `int` (default: None)
+    n_jobs: `int` (default: None)
         How many cores to run on in parallel. Per default we set it to the number of available CPUs.
     mode: `str` in ['', '10X'] (default: '')
         Whether to use the SmartSeq2 model or the 10X one (0 - 0.5 - 1).

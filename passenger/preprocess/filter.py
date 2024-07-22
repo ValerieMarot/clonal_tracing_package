@@ -4,10 +4,10 @@ from scipy.stats import pearsonr
 
 def min_MAF_filter(f_r_a_c, REF, ALT):
     cov = REF + ALT
-    only_REF = np.sum((REF >= 2) & (ALT <= 2), axis=0)
-    only_ALT = np.sum((REF <= 2) & (ALT >= 2), axis=0)
-    any_REF = np.sum((REF >= 2) & (REF / cov > .3), axis=0)
-    any_ALT = np.sum((ALT >= 2) & (ALT / cov > .3), axis=0)
+    only_REF = np.sum((REF >= 1) & (ALT <= 1), axis=0)
+    only_ALT = np.sum((REF <= 1) & (ALT >= 1), axis=0)
+    any_REF = np.sum((REF >= 1) & (REF / cov > .3), axis=0)
+    any_ALT = np.sum((ALT >= 1) & (ALT / cov > .3), axis=0)
     sub = (only_ALT >= f_r_a_c) & (any_REF >= f_r_a_c)
     sub |= (only_REF >= f_r_a_c) & (any_ALT >= f_r_a_c)
     return sub

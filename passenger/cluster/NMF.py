@@ -155,21 +155,15 @@ def parallel_run(in_arr, n_entries, n_parts, fun, bounds, n_jobs, axis=0):
     return np.array(r)
 
 
-def weighted_errors(M, C, V, W):
-    M_recov = np.dot(C, V)
-    E = np.nansum(((M_recov - M) ** 2) * W)
-    return E
-
-
-def diff_score(C):
-    from itertools import combinations
-    test_list = np.arange(C.shape[1])
-    res = list(combinations(test_list, 2))
-    diff = []
-    for i in res:
-        diff.append(np.abs(C[:, i[0]] - C[:, i[1]]))
-    diff = np.array(diff)
-    return np.mean(np.nanmean(diff, axis=0))
+def orth_score(C):
+    k = C.shape[1]
+    sc = 0
+    n = 0
+    for i in range(k):
+        for j in np.arange(i + 1, k):
+            n += 1
+            sc += np.dot(C[:, i], C[:, j]) / (np.linalg.norm(C[:, i]) * np.linalg.norm(C[:, j]))
+    return sc / n
 
 
 def bootstrap_wNMF(adata, k, n_bootstrap=50, bootstrap_percent=.9,
@@ -183,10 +177,8 @@ def bootstrap_wNMF(adata, k, n_bootstrap=50, bootstrap_percent=.9,
 
     Parameters
     ----------
-    REF: `float` np.array [n_vars * n_cells]  # todo make it be n_cells * n_vars
-        Count matrix for reference reads.
-    ALT: `float` np.array [n_vars * n_cells]  # todo make it be n_cells * n_vars
-        Count matrix for reference reads.
+    adata: Anndata object
+        Containing REF and ALT matrices in adata.uns
     k: `int` (default: 2)
         Number of clusters
     n_bootstrap: `int` (default: 10)
@@ -235,7 +227,6 @@ def bootstrap_wNMF(adata, k, n_bootstrap=50, bootstrap_percent=.9,
     for i in np.arange(0, n_bootstrap):
         d = np.zeros((k, k))
         clus2 = np.argmax(C_all[i], axis=1)
-        print(clus2)
         for j in range(k):
             for h in range(k):
                 d[j, h] = (np.sum((clus1 == j) & (clus2 == h)))
@@ -257,10 +248,7 @@ def bootstrap_wNMF(adata, k, n_bootstrap=50, bootstrap_percent=.9,
         C, C_std = C_all[0], None
         V, V_std = V_all[0], None
         adata.varm["V"], adata.obsm["C"] = V.T, C
-    print(C.shape)
 
-    adata.uns["weighted_E"] = weighted_errors(adata.layers["M"], C, V, adata.layers["weights"])
-    adata.uns["k"]: k
-    adata.uns["C_dist"] = diff_score(C) if k > 1 else np.nan
-    adata.uns["all_C"] = C_all
+    adata.uns["k"] = k
+    adata.uns["orth_score"] = orth_score(C) if k > 1 else np.nan
     return adata

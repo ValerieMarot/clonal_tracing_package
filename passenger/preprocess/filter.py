@@ -4,10 +4,10 @@ from scipy.stats import pearsonr
 
 def min_MAF_filter(f_r_a_c, REF, ALT):
     cov = REF + ALT
-    only_REF = np.sum((REF >= 1) & (ALT < 1), axis=0)
-    only_ALT = np.sum((REF < 1) & (ALT >= 1), axis=0)
-    any_REF = np.sum((REF / cov > .3), axis=0)
-    any_ALT = np.sum((ALT / cov > .3), axis=0)
+    only_REF = np.sum((REF > 1) & (ALT == 0), axis=0)
+    only_ALT = np.sum((REF == 0) & (ALT > 1), axis=0)
+    any_REF = np.sum(((REF / cov) > .3) & (REF>1), axis=0)
+    any_ALT = np.sum(((ALT / cov) > .3) & (ALT>1), axis=0)
     sub = (only_ALT >= f_r_a_c) & (any_REF >= f_r_a_c)
     sub |= (only_REF >= f_r_a_c) & (any_ALT >= f_r_a_c)
     return sub
@@ -31,7 +31,7 @@ def filter_vars(adata,
 
     # filter cell coverage
     cell_coverage = np.sum(adata.X >= 2, axis=1) / adata.shape[1]
-    adata = adata[cell_coverage > min_cell_cov/100]
+    adata = adata[cell_coverage > (min_cell_cov/100)]
 
     # refilter min MAF in case excluded cells from coverage contributed a lot
     REF, ALT = adata.layers["REF"], adata.layers["ALT"]
